@@ -23,6 +23,8 @@ export function popover(id,content,opts){
     if (!opts.hasOwnProperty('placement')){ opts['placement'] = 'bottom'; }
     if (opts['bind']){
         $(opts.elm).on(opts['bind_mouse_enter'] ? 'mouseenter' : 'mouseover',function(){
+            /* [anki-fork] touch: a plain tap acts, the info bubble only shows on a long press (see below) */
+            if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && !window.__avLongPress){ return; }
             if (popperRef || $(`#popper`).length > 0){
                 clearPopper();
             }
@@ -59,6 +61,9 @@ export function popover(id,content,opts){
             );
 
             popper.show();
+            if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches){
+                setTimeout(function(){ clearPopper(id); }, 9000);   /* safety only: the bubble normally closes when the finger lifts */
+            }
             if (opts.hasOwnProperty('in') && typeof opts['in'] === 'function'){
                 opts['in']({ this: this, popper: popper, id: `popper` });
             }
@@ -67,6 +72,21 @@ export function popover(id,content,opts){
                 $(popper).append(`<span class="pyro"><span class="before"></span><span class="after"></span></span>`);
             }
         });
+    }
+    if (opts['bind'] && window.matchMedia && window.matchMedia('(pointer: coarse)').matches){
+        /* [anki-fork] long press (450 ms) shows the info bubble without acting; lifting the finger closes it and swallows the tap */
+        var lpTimer = 0, lpFired = false;
+        $(opts.elm).on('touchstart',function(){
+            lpFired = false; clearTimeout(lpTimer);
+            var el = this;
+            lpTimer = setTimeout(function(){ lpFired = true; window.__avLongPress = true; $(el).trigger('mouseover'); window.__avLongPress = false; }, 450);
+        });
+        $(opts.elm).on('touchmove touchcancel',function(){ clearTimeout(lpTimer); });
+        $(opts.elm).on('touchend',function(e){
+            clearTimeout(lpTimer);
+            if (lpFired){ e.preventDefault(); lpFired = false; clearPopper(id); }
+        });
+        $(opts.elm).on('contextmenu',function(e){ e.preventDefault(); });
     }
     if (opts['unbind']){
         if ('ontouchstart' in document.documentElement && navigator.userAgent.match(/Mobi/ && global.settings.touch) ? true : false){

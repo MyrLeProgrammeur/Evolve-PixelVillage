@@ -1,0 +1,91 @@
+--- a/kit/evolution.js
++++ b/kit/evolution.js
+@@ -22,14 +22,14 @@
+   /* ---------- tables (human path only; other branches plug in here) ---------- */
+   var FINALS = [null, null, 20, 40, 60, 80, 90, 100];
+   var PATHS = { human: [
+-    { stage: 0, id: 'protoplasm', view: 'pool', label: 'soupe' },
+-    { stage: 1, id: 'cell', view: 'pool', label: 'cellule' },
+-    { stage: 2, id: 'sexual_reproduction', view: 'pool', label: 'couple' },
++    { stage: 0, id: 'protoplasm', view: 'pool', label: 'soup' },
++    { stage: 1, id: 'cell', view: 'pool', label: 'cell' },
++    { stage: 2, id: 'sexual_reproduction', view: 'pool', label: 'pair' },
+     { stage: 3, id: 'phagocytosis', view: 'pool', label: 'phago' },
+-    { stage: 4, id: 'multicellular', view: 'shore', creature: 'colony', label: 'colonie' },
+-    { stage: 5, id: 'bilateral_symmetry', view: 'shore', creature: 'worm', label: 'ver' },
+-    { stage: 6, id: 'mammals', view: 'shore', creature: 'mammal', label: 'mammif\u00e8re' },
+-    { stage: 7, id: 'humanoid', view: 'shore', creature: 'ape', label: 'singe' }] };
++    { stage: 4, id: 'multicellular', view: 'shore', creature: 'colony', label: 'colony' },
++    { stage: 5, id: 'bilateral_symmetry', view: 'shore', creature: 'worm', label: 'worm' },
++    { stage: 6, id: 'mammals', view: 'shore', creature: 'mammal', label: 'mammal' },
++    { stage: 7, id: 'humanoid', view: 'shore', creature: 'ape', label: 'ape' }] };
+   /* home: patrol segment in tile coords; speed tiles/s; fps of the walk cycle; pause ms at each end (rest frame) */
+   var CREATURES = {
+     colony: { walk: ['org_colony_l'], fps: 2, speed: 0.08, water: true, home: [[7.2, 16.4], [8.4, 16.8]] },
+@@ -494,7 +494,7 @@
+     return true;
+   }
+ 
+-  /* ---------- in-scene gauges (bitmap font, French labels) ---------- */
++  /* ---------- in-scene gauges (bitmap font) ---------- */
+   var HUD = { key: '', pix: null };
+   function arc(p, cx, cy, f) {
+     for (var y = cy - 14; y <= cy; y++) for (var x = cx - 14; x <= cx + 14; x++) {
+@@ -507,8 +507,8 @@
+   function gauges(d) {
+     var u = SK.ui, hasD = !!d.DNA, hasF = d.final != null, w = hasF ? 150 : 112, h = hasD || hasF ? 50 : 32, p = u.panel(w, h, null), ink2 = R('soot', 3), num2 = R('walnut', 3);
+     function bar(label, r, y, ramp) { u.text(p, label, 9, y, ink2); var v = round(r.a) + ' / ' + round(r.m); u.text(p, v, 102 - u.measure(v), y, num2); p.blit(u.progress(94, r.a / r.m, ramp), 8, y + 9); }
+-    bar('ARN', d.RNA, 8, 'saffron');
+-    if (hasD) bar('ADN', d.DNA, 26, 'indigo');
++    bar('RNA', d.RNA, 8, 'saffron');
++    if (hasD) bar('DNA', d.DNA, 26, 'indigo');
+     if (hasF) arc(p, 127, 30, d.final);
+     return p;
+   }
+@@ -557,7 +557,7 @@
+       ['grass', function (tp, cx, cy, gy) { walker(tp, cx, gy, (t % 6000) < 4000 ? ['org_ape_a', 'org_ape_b'][floor(t / 166) & 1] : 'org_ape_idle', false, 'stick'); }],
+       ['grass', function (tp, cx, cy, gy) { tp.blit(spr('fire_ring'), cx - 20, gy - 6); var f = floor(t / 200) % 3; [[0, -2, 2], [1, -2, 3], [0, -3, 1], [f - 1, -4, 0]].forEach(function (s) { tp.set(cx - 13 + s[0], gy + s[1], R('ember', s[2])); });
+         tp.blit(SK.citizens.compose('unemployed', 3, 'idle', floor(t / 500) & 1, {}), cx + 8 - 16, gy - 31); }]];
+-    STG.forEach(function (s, i) { tile(2 + i * 72, y, 70, 60, s[0], s[1], i < 8 ? i + ' ' + PATHS.human[i].label : 'humain'); });
++    STG.forEach(function (s, i) { tile(2 + i * 72, y, 70, 60, s[0], s[1], i < 8 ? i + ' ' + PATHS.human[i].label : 'human'); });
+     y += 60 + 14;
+     lab('Parties de la cellule \u00b7 nombres 0 / 1 / 5 / 12 / 24 (au-del\u00e0 : densit\u00e9 de particules)', 2, y); y += 12;
+     var CNT = [0, 1, 5, 12, 24], ROWS = [['membrane', function (n) { return base({ m: n, e: 1 }); }, 0.3], ['organelles', function (n) { return base({ m: 1, o: n }); }, 0.26],
+--- a/kit/ui.js
++++ b/kit/ui.js
+@@ -181,19 +181,19 @@
+     text(p, 'abcdefghijklmnopqrstuvwxyz', 2, y, ink); y += 12;
+     text(p, '0123456789 .,:;!?\'"-+=/()%#&*@_[]', 2, y, ink); y += 12;
+     text(p, '\u00e9\u00e8\u00ea\u00eb\u00e0\u00e2\u00ee\u00ef\u00f4\u00f9\u00fb\u00fc\u00e7\u0153 \u00c9\u00c8\u00c0\u00c7 \u20ac \u00b0 \u00ab \u00bb', 2, y, ink); y += 14;
+-    text(p, 'Voix ambigu\u00eb d\'un c\u0153ur qui, au z\u00e9phyr, pr\u00e9f\u00e8re', 2, y, R('walnut', 3)); y += 11;
+-    text(p, 'les jattes de kiwis.', 2, y, R('walnut', 3)); text(p, '\u00c9T\u00c9 \u00c0 GAGNER: 12 \u20ac', 120, y, R('madder', 2), { bold: true });
++    text(p, 'Pack my box with five dozen liquor jugs.', 2, y, R('walnut', 3)); y += 11;
++    text(p, 'The quick brown fox jumps.', 2, y, R('walnut', 3)); text(p, 'SALE: 12 \u20ac', 120, y, R('madder', 2), { bold: true });
+     return p;
+   }
+   function uiSheet(t) {
+     var p = new Pix(328, 160);
+     p.blit(panel(96, 56, 'Village', null), 2, 2);
+-    text(p, 'Bois  48/200', 11, 24, R('walnut', 3)); p.blit(progress(76, 0.24 + 0.5 * (0.5 + 0.5 * Math.sin(t / 900)), 'sage'), 11, 36);
++    text(p, 'Wood  48/200', 11, 24, R('walnut', 3)); p.blit(progress(76, 0.24 + 0.5 * (0.5 + 0.5 * Math.sin(t / 900)), 'sage'), 11, 36);
+     p.blit(panel(64, 40, null, { MAIN: 'reed', ACCENT: 'lime', WOOD: 'indigo' }), 104, 2);
+-    text(p, 'Calme', 116, 14, R('soot', 3)); p.blit(checkbox(true), 116, 26); p.blit(checkbox(false), 128, 26); p.blit(closeX(), 150, 8);
++    text(p, 'Calm', 116, 14, R('soot', 3)); p.blit(checkbox(true), 116, 26); p.blit(checkbox(false), 128, 26); p.blit(closeX(), 150, 8);
+     p.blit(panel(32, 32, null, { MAIN: 'hide', ACCENT: 'cream', WOOD: 'teal' }), 172, 2);
+     var cyc = floor(t / 700) % 4, st = ['normal', 'hover', 'pressed', 'disabled'];
+-    st.forEach(function (s, i) { p.blit(button(54, 16, i === 3 ? 'Non' : 'Oui', s), 2 + i * 58, 64); });
++    st.forEach(function (s, i) { p.blit(button(54, 16, i === 3 ? 'No' : 'Yes', s), 2 + i * 58, 64); });
+     p.blit(button(54, 16, 'Live', st[cyc], { MAIN: 'teal', ACCENT: 'cream' }), 236, 64);
+     p.blit(slider(70, 0.5 + 0.45 * Math.sin(t / 1100)), 210, 30); p.blit(cursor(), 288, 26 + round(Math.sin(t / 400)));
+     var tabs = [['tab_gear'], ['tab_card'], ['ic_house'], ['fx_bulb'], ['unit_crate'], ['ic_coin'], ['tool_shield'], ['cart_box']];
+--- a/atelier.html
++++ b/atelier.html
+@@ -165,7 +165,7 @@
+       C.appendChild(block('Evolution · Era 0', 'Every stage of the human path (pool 0–3, shore 4–7, species flip), each cell part at counts 0 / 1 / 5 / 12 / 24 (membrane thickens and gains patterns, nucleus grows and glows, eukaryotes gain companions, mitochondria glow with the activity of organelles and nuclei), the mitosis and phagocytosis loops, creature walks and the two random events.', [h('div', { class: 'scroll' }, [evc])]));
+       C.appendChild(block('Nature, animals, icons, units, moon phases', null, [h('div', { class: 'scroll' }, [canvasOf(SK.world.sheet(CS.season, CS.biome), 3)])]));
+       var uc = h('canvas'); live.push(function (t) { paint(uc, SK.ui.uiSheet(t), 3); });
+-      C.appendChild(block('Effects, interface and font', 'French pangram set in the bitmap font. Buttons cycle normal, hover, pressed, disabled.', [h('div', { class: 'scroll', style: 'background:#efe6da' }, [canvasOf(SK.ui.fontSheet(), 3)]), h('div', { class: 'scroll' }, [uc])]));
++      C.appendChild(block('Effects, interface and font', 'English pangram and accented glyphs set in the bitmap font. Buttons cycle normal, hover, pressed, disabled.', [h('div', { class: 'scroll', style: 'background:#efe6da' }, [canvasOf(SK.ui.fontSheet(), 3)]), h('div', { class: 'scroll' }, [uc])]));
+     }
+     [seg('Season', [[0, 'Spring'], [1, 'Summer'], [2, 'Autumn'], [3, 'Winter']], function () { return CS.season; }, function (v) { CS.season = v; drawContact(); }),
+      select('Biome (nature sheet)', Object.keys(X.BIOMES).map(function (b) { return [b, b]; }), function () { return CS.biome; }, function (v) { CS.biome = v; drawContact(); })].forEach(function (e) { $('csCtl').appendChild(e); });

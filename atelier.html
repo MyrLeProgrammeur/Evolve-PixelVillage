@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evolve · bohemian sprite atelier (offline)</title>
+<style>
+:root{color-scheme:light dark;--bg:#1c191b;--card:#252124;--line:#383236;--ink:#efe6da;--mute:#a89c92;--soft:#d8cdc1;--acc:#f4bd45;--ok:#9caf7a;--btn:#2c272a;--btnline:#41393e}
+@media (prefers-color-scheme: light){:root{--bg:#f4efe6;--card:#fffaf1;--line:#ddd2c2;--ink:#2a2226;--mute:#6f6259;--soft:#43383c;--acc:#b56a12;--ok:#4f6b2c;--btn:#fffaf1;--btnline:#cdbfae}}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
+a{color:var(--acc)}a:hover{color:var(--ink)}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 16px 72px;display:flex;flex-direction:column;gap:44px;overflow-x:hidden}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+h1{margin:0;font-size:clamp(26px,5vw,40px);line-height:1.1}
+h2{margin:0;font:600 13px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--acc)}
+section{display:flex;flex-direction:column;gap:16px}
+.lead{font-size:14px;line-height:1.5;color:var(--mute);max-width:70ch;text-wrap:pretty}
+.grid{display:grid;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card b{font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end}
+.ctl{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--mute)}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+button,select{font:600 13px system-ui,sans-serif;height:36px;padding:0 12px;border-radius:4px;cursor:pointer;border:1px solid var(--btnline);background:var(--btn);color:var(--ink)}
+button.on{background:var(--acc);border-color:var(--acc);color:#1c191b}
+canvas{image-rendering:pixelated;display:block}
+.scroll{overflow-x:auto;border-radius:6px;border:1px solid var(--line);padding:10px;background:#d3e7e3}
+.checker{display:flex;align-items:center;justify-content:center;min-height:96px;border-radius:3px;overflow:auto;background-color:#342f32;background-image:repeating-conic-gradient(#3e383c 0 25%,#342f32 0 50%);background-size:8px 8px;padding:8px}
+.sl{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute);min-width:0}
+.sl span{display:flex;justify-content:space-between;gap:8px}.sl em{font-style:normal;color:var(--ink)}
+input[type=range]{width:100%;accent-color:var(--acc);height:28px}
+.sim{display:block;width:100%;height:clamp(320px,62vh,600px);cursor:grab;background:#eef3e6;border-radius:6px;border:1px solid var(--line)}
+.tiny{font-size:11px;color:var(--mute)}
+</style>
+</head>
+<body>
+
+<script src="kit/palette.js"></script><script src="kit/pieces_b1.js"></script><script src="kit/pieces_b2.js"></script><script src="kit/pieces_b3.js"></script>
+<script src="kit/pieces_b4.js"></script><script src="kit/pieces_b5.js"></script><script src="kit/pieces_b6.js"></script><script src="kit/pieces_b7.js"></script><script src="kit/pieces_b8.js"></script><script src="kit/pieces_b9.js"></script>
+<script src="kit/spritekit.js"></script><script src="kit/village.js"></script><script src="kit/village_b3.js"></script><script src="kit/village_b4.js"></script>
+<script src="kit/citizens.js"></script><script src="kit/world.js"></script><script src="kit/ui.js"></script><script src="kit/era1.js"></script><script src="kit/evolution.js"></script>
+<div class="wrap" id="app">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <div class="mono tiny" style="letter-spacing:.08em;text-transform:uppercase">Evolve · Era 0 evolution and Era 1 village views · sprite atelier · offline edition</div>
+    <h1>A bohemian pixel-art sprite kit</h1>
+    <div class="lead">267 hand-drawn pieces (169 from batches 1–7, 53 from the Era 1 audit follow-up, 45 for the Era 0 evolution view) and the procedural generator that composes them into a primordial pool, a shoreline, buildings, people, terrain, weather and seasons. Plain JavaScript and Canvas 2D: no network, no framework, no web font. Open this file straight from disk.</div>
+  </header>
+  <section id="s1"><h2>01 · Style bible and palette</h2><div class="grid" id="bible" style="grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))"></div>
+    <div class="lead">Master palette · ramps of 5 tones, light → dark, plus ink and spark.</div>
+    <div class="grid" id="pal" style="grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))"></div></section>
+  <section id="s2"><h2>02 · Hand-drawn pieces</h2>
+    <div class="lead">Each piece is a text grid of semantic characters: 1–5 MAIN tones, a–d ACCENT, s–v skin, h–k hair, m–q metal, w–z wood, f g l r foliage, e ember, o ink, * spark. Wall modules are drawn pre-skewed for the left face.</div>
+    <div class="row" id="pcCtl"></div><div class="grid" id="pieces" style="grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr))"></div></section>
+  <section id="s3"><h2>03 · Contact sheet</h2><div class="row" id="csCtl"></div><div id="contact" style="display:flex;flex-direction:column;gap:24px"></div></section>
+  <section id="s4"><h2>04 · Simulator · Era 0 and village</h2>
+    <div class="lead">Era 0 is drawn while race.species is 'protoplasm': a side-on pool for stages 0–3, the shoreline for 4–7, then the hand-over to the village. Tap the pool to spark RNA. In the village, drag to pan, tap a group of citizens to float their resource icon, tap a building for a +1 pop. One view pixel is one citizen pixel; buildings, terrain, decor and smoke are drawn at ×2.</div>
+    <div id="evoCtl" style="display:flex;flex-direction:column;gap:14px"></div><div id="simCtl" style="display:flex;flex-direction:column;gap:14px"></div>
+    <canvas class="sim" id="sim"></canvas>
+    <div id="simSliders" style="display:flex;flex-direction:column;gap:14px"></div></section>
+  <section id="s5"><h2>05 · Self-check</h2><div id="check" style="display:flex;flex-direction:column;gap:12px"></div></section>
+</div>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  function h(tag, attrs, kids) {
+    var e = document.createElement(tag); attrs = attrs || {};
+    Object.keys(attrs).forEach(function (k) { if (k === 'style') e.style.cssText = attrs[k]; else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), attrs[k]); else if (k === 'text') e.textContent = attrs[k]; else e.setAttribute(k, attrs[k]); });
+    (kids || []).forEach(function (c) { if (c != null) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function paint(cv, pix, z) { cv.width = pix.w * z; cv.height = pix.h * z; cv.style.width = cv.width + 'px'; cv.style.height = cv.height + 'px'; var c = cv.getContext('2d'); c.imageSmoothingEnabled = false; c.clearRect(0, 0, cv.width, cv.height); c.drawImage(pix.canvas(), 0, 0, cv.width, cv.height); return cv; }
+  function canvasOf(pix, z) { return paint(h('canvas'), pix, z); }
+  function seg(label, opts, get, set) {
+    var box = h('div', { class: 'seg' }), wrap = h('div', { class: 'ctl' }, [label, box]);
+    function draw() { box.innerHTML = ''; opts.forEach(function (o) { var v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : String(o);
+      box.appendChild(h('button', { class: get() === v ? 'on' : '', onclick: function () { set(v); draw(); } }, [l])); }); }
+    draw(); return wrap;
+  }
+  function toggle(label, get, set) { var b = h('button', { class: get() ? 'on' : '' }, [label]); b.onclick = function () { set(!get()); b.className = get() ? 'on' : ''; }; return b; }
+  function select(label, opts, get, set) { var s = h('select', { onchange: function () { set(s.value); } }); opts.forEach(function (o) { var op = h('option', { value: o[0] }, [o[1]]); if (o[0] === get()) op.selected = true; s.appendChild(op); }); return h('label', { class: 'ctl' }, [label, s]); }
+  function slider(label, min, max, get, set, fmt) {
+    var out = h('em'), r = h('input', { type: 'range', min: min, max: max, step: 1, value: get() });
+    function upd() { out.textContent = fmt ? fmt(+r.value) : r.value; }
+    r.addEventListener('input', function () { set(+r.value); upd(); }); upd();
+    return h('label', { class: 'sl' }, [h('span', {}, [label, out]), r]);
+  }
+  function sgrid(min) { return h('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fill,minmax(min(100%,' + min + 'px),1fr));gap:10px 16px' }); }
+
+  var BIBLE = [
+    ['Mood', 'Sun-faded textiles on earthy timber. Earth neutrals (oak, river stone, terracotta, lime plaster, straw) carry most pixels. Dyed accents (saffron, madder, indigo, teal, plum, rose) appear only where a person would have added them: cloth, paint, flowers, light.'],
+    ['Light', 'From the upper left, everywhere. Roof planes facing the viewer and left walls are lit; right walls sit one tone darker. Cast shadows fall to the lower right as a flat patch one ground tone darker: short in summer, long in winter.'],
+    ['Ramps', 'Five tones per ramp, hue-shifted: lights lean warm and yellow, darks lean cool and violet. Pieces paint with tones 1–4. Tone 5 lets the generator shade any piece one step (right faces, mirrored modules) without losing its outline.'],
+    ['Outline', 'Coloured selective outline. No black lines: each silhouette closes in the darkest tone of its own material, softened to one step on the lit top-left edge. Ink is reserved for voids, eyes and doorways.'],
+    ['Shading', 'Flat clustered planes, 2–3 tones per surface. No dithering, no pillow shading, no single-pixel speckle. Texture comes from clustered shapes: log courses, stones, straw, grass clumps.'],
+    ['Proportion and line', 'Chunky and squat. Generous roofs with a 2 px overhang and 1:1 rakes; oversized doors; exaggerated tool heads. Every ground and wall line is strict 2:1. People stand about door height: the world is drawn at ×2, citizens and animals at ×1.'],
+    ['Bohemian layer', 'About one touch per two buildings: painted doors and shutters, striped cloth, bunting, potted herbs, lit windows, a cat on one roof, a bird on a lantern post. Colour lives on wood and fabric; stone and plaster stay calm so the accents carry.'],
+    ['People', 'Outfit colour names the archetype before shape: sage land, madder wood and stone, saffron craft, indigo lore, cream faith, plum finance, rose show, slate soldier. Then headwear, then tool.']
+  ];
+
+  function boot() {
+    var K = window.SpriteKit, X = K._, SK = window.SK, P = SK.PIECES, PAL = SK.PALETTE;
+    BIBLE.forEach(function (b) { $('bible').appendChild(h('div', { class: 'card' }, [h('b', { text: b[0] }), h('div', { style: 'font-size:14px;line-height:1.5;color:var(--soft)', text: b[1] })])); });
+    X.families().forEach(function (f) {
+      var c = h('div', { class: 'card' }, [h('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [h('b', { text: f.label }), h('span', { class: 'mono tiny', text: f.slot })])]);
+      f.ramps.forEach(function (id) { var cv = h('canvas', { width: 70, height: 14, style: 'width:70px;height:14px' }), x = cv.getContext('2d');
+        PAL.ramps[id].forEach(function (hex, i) { x.fillStyle = hex; x.fillRect(i * 14, 0, 14, 14); });
+        c.appendChild(h('div', { style: 'display:flex;align-items:center;gap:10px' }, [cv, h('span', { class: 'mono', style: 'font-size:12px;color:var(--soft)', text: id })])); });
+      $('pal').appendChild(c);
+    });
+    $('pal').appendChild(h('div', { class: 'card' }, [h('b', { text: 'Singles' }),
+      h('div', { style: 'display:flex;gap:10px;align-items:center' }, [h('span', { style: 'width:14px;height:14px;background:' + PAL.ink }), h('span', { class: 'mono', style: 'font-size:12px', text: 'ink · voids, eyes' })]),
+      h('div', { style: 'display:flex;gap:10px;align-items:center' }, [h('span', { style: 'width:14px;height:14px;background:' + PAL.spark }), h('span', { class: 'mono', style: 'font-size:12px', text: 'spark · 1 px glints' })])]));
+
+    /* 02 pieces */
+    var PS = { zoom: 4, main: '', acc: '', mirror: false, cat: 'all' }, cats = ['all'].concat(Object.keys(X.EXPECTED)), ramps = [['', 'piece default']].concat(Object.keys(PAL.ramps).map(function (r) { return [r, r]; }));
+    function drawPieces() {
+      var g = $('pieces'); g.innerHTML = ''; var map = { MAIN: PS.main || undefined, ACCENT: PS.acc || undefined };
+      Object.keys(P).forEach(function (n) { var d = P[n]; if (PS.cat !== 'all' && d.cat !== PS.cat) return;
+        g.appendChild(h('div', { class: 'card', style: 'padding:10px' }, [h('div', { class: 'checker' }, [canvasOf(X.sprite(n, map, { flip: PS.mirror }), PS.zoom)]),
+          h('span', { class: 'mono', style: 'font-size:12px;font-weight:700;overflow-wrap:anywhere', text: n }), h('span', { class: 'mono tiny', style: 'overflow-wrap:anywhere', text: d.w + '×' + d.h + ' · ' + d.cat + (d.skew ? ' · skewed' : '') + ' · ' + (d.uses || '') })])); });
+    }
+    [seg('Zoom', [[1, 'x1'], [2, 'x2'], [4, 'x4'], [8, 'x8']], function () { return PS.zoom; }, function (v) { PS.zoom = v; drawPieces(); }),
+     select('Category', cats.map(function (c) { return [c, c]; }), function () { return PS.cat; }, function (v) { PS.cat = v; drawPieces(); }),
+     select('MAIN ramp', ramps, function () { return PS.main; }, function (v) { PS.main = v; drawPieces(); }),
+     select('ACCENT ramp', ramps, function () { return PS.acc; }, function (v) { PS.acc = v; drawPieces(); }),
+     toggle('Mirror', function () { return PS.mirror; }, function (v) { PS.mirror = v; drawPieces(); })].forEach(function (e) { $('pcCtl').appendChild(e); });
+    drawPieces();
+
+    /* 03 contact sheet */
+    var CS = { season: 1, biome: 'grassland' }, live = [];
+    var GROUPS = [['Living', ['basic_housing', 'cottage', 'lodge']], ['Food', ['smokehouse', 'farm', 'compost', 'silo', 'mill']], ['Storage', ['shed', 'storage_yard']],
+      ['Extraction', ['lumber_yard', 'sawmill', 'rock_quarry', 'mine', 'coal_mine']], ['Industry', ['foundry', 'smelter', 'cement_plant', 'metal_refinery']],
+      ['Commerce and knowledge', ['trade', 'bank', 'library', 'university']], ['Society', ['temple', 'amphitheatre', 'garrison', 'hospital']]];
+    var NAME = {}; X.BUILDINGS.forEach(function (b) { NAME[b.key] = b.name; });
+    function block(title, lead, kids) { return h('div', { style: 'display:flex;flex-direction:column;gap:10px' }, [h('b', { style: 'font-size:15px', text: title }), lead ? h('div', { class: 'lead', text: lead }) : null].concat(kids)); }
+    function drawContact() {
+      var C = $('contact'); C.innerHTML = ''; live = [];
+      var tex = sgrid(110);
+      Object.keys(P).filter(function (n) { return P[n].cat === 'texture'; }).forEach(function (n) { var sp = X.sprite(n), t = new X.Pix(32, 32); for (var y = 0; y < 32; y += 8) for (var x = 0; x < 32; x += 8) t.blit(sp, x, y);
+        tex.appendChild(h('div', { style: 'display:flex;flex-direction:column;gap:4px' }, [canvasOf(t, 3), h('span', { class: 'mono tiny', text: n })])); });
+      C.appendChild(block('Textures (tiled 4×4)', null, [tex]));
+      var VL = SK.village;
+      GROUPS.forEach(function (gr) {
+        var g = sgrid(300);
+        gr[1].forEach(function (key) { var fw = X.BUILDINGS.filter(function (b) { return b.key === key; })[0].fw;
+          [1, 2, 3].forEach(function (t) { g.appendChild(h('div', { class: 'card', style: 'padding:10px' }, [h('div', { class: 'scroll', style: 'padding:6px' }, [canvasOf(VL.sheet(key, t, CS.season, fw > 1 ? 2 : 3), 1)]),
+            h('span', { style: 'font-size:13px;color:var(--soft)', text: NAME[key] + ' · ' + ['P1 Primitive', 'P2 Timber', 'P3 Masonry'][t - 1] + (key === 'cottage' && t === 1 ? ' (drawn as P2)' : '') })])); }); });
+        C.appendChild(block(gr[0], null, [g]));
+      });
+      var dens = sgrid(300);
+      ['basic_housing', 'farm', 'foundry'].forEach(function (k2) { dens.appendChild(h('div', { class: 'card', style: 'padding:10px' }, [h('div', { class: 'scroll', style: 'padding:6px' }, [canvasOf(VL.densitySheet(k2, 2, CS.season), 1)]), h('span', { class: 'tiny', text: NAME[k2] + ' · normal · annex · annex + storey' })])); });
+      C.appendChild(block('Density states', null, [dens]));
+      var lc = h('canvas'); live.push(function (t) { paint(lc, SK.citizens.lineup(t, { axe: 2, mining: 2 }), 3); });
+      var strips = sgrid(340);
+      X.JOBS.forEach(function (j) { var J = SK.citizens.JOB[j]; strips.appendChild(h('div', { class: 'card', style: 'padding:10px' }, [h('b', { text: j }),
+        h('span', { class: 'mono tiny', text: (J.tool ? J.tool.replace('tool_', '') : J.cart ? 'hand cart' : 'empty hands') + ' · ' + (J.hat ? J.hat.replace('hat_', '') : J.band ? 'headband' : 'bare head') }),
+        h('div', { class: 'scroll', style: 'padding:4px' }, [canvasOf(SK.citizens.strip(j, 0, { axe: 2, mining: 2 }), 2)])])); });
+      var sc2 = h('canvas'); live.push(function (t) { paint(sc2, SK.citizens.states(t), 3); });
+      C.appendChild(block('Citizens · 18 jobs', 'Live at work, then per job: idle ×2 · walk A, pass, B, pass · work ×2 · walking away ×2.', [h('div', { class: 'scroll' }, [lc]), strips,
+        h('b', { style: 'font-size:14px', text: 'Era 1 states' }), h('div', { class: 'tiny', text: SK.citizens.STATES.map(function (q, i) { return (i + 1) + ' ' + q[3]; }).join(' · ') }), h('div', { class: 'scroll' }, [sc2]),
+        h('div', { class: 'tiny', text: 'Heads: 3 skins × 4 cuts × 5 hair ramps, then the 10 headwear pieces (fur hat, rain hood), headband, hair flower, head bandage and famine pallor.' }), h('div', { class: 'scroll' }, [canvasOf(SK.citizens.heads(), 3)])]));
+      var ec = h('canvas'); live.push(function (t) { paint(ec, SK.era1.sheet(CS.season, t), 3); });
+      C.appendChild(block('Era 1 world props and effects', 'Government banners (by civic.govern.type), market stall, spy gallows, neighbour camps (by hostility), grave, dump props, irrigation sluice, shanty patch, pets, state badges, refinery valve; fire frames, mine collapse beams, +N gain bubbles, food alert, finished-tech bulb; shanty cabins P1–P3.', [h('div', { class: 'scroll' }, [ec])]));
+      var evc = h('canvas'); live.push(function (t) { paint(evc, SK.evo.sheet(t), 2); });
+      C.appendChild(block('Evolution · Era 0', 'Every stage of the human path (pool 0–3, shore 4–7, species flip), each cell part at counts 0 / 1 / 5 / 12 / 24 (membrane thickens and gains patterns, nucleus grows and glows, eukaryotes gain companions, mitochondria glow with the activity of organelles and nuclei), the mitosis and phagocytosis loops, creature walks and the two random events.', [h('div', { class: 'scroll' }, [evc])]));
+      C.appendChild(block('Nature, animals, icons, units, moon phases', null, [h('div', { class: 'scroll' }, [canvasOf(SK.world.sheet(CS.season, CS.biome), 3)])]));
+      var uc = h('canvas'); live.push(function (t) { paint(uc, SK.ui.uiSheet(t), 3); });
+      C.appendChild(block('Effects, interface and font', 'English pangram and accented glyphs set in the bitmap font. Buttons cycle normal, hover, pressed, disabled.', [h('div', { class: 'scroll', style: 'background:#efe6da' }, [canvasOf(SK.ui.fontSheet(), 3)]), h('div', { class: 'scroll' }, [uc])]));
+    }
+    [seg('Season', [[0, 'Spring'], [1, 'Summer'], [2, 'Autumn'], [3, 'Winter']], function () { return CS.season; }, function (v) { CS.season = v; drawContact(); }),
+     select('Biome (nature sheet)', Object.keys(X.BIOMES).map(function (b) { return [b, b]; }), function () { return CS.biome; }, function (v) { CS.biome = v; drawContact(); })].forEach(function (e) { $('csCtl').appendChild(e); });
+    drawContact();
+    var lastF = -1;
+    (function loop(now) { var f = Math.floor(now / 125); if (f !== lastF) { lastF = f; live.forEach(function (fn) { fn(now); }); } requestAnimationFrame(loop); })(0);
+
+    /* 04 simulator */
+    var S = { tier: 2, season: 1, weather: 2, temp: 1, wind: 0, moon: 14, biome: 'grassland', scale: 1, mining: 2, on: true, powered: false, expose: true, sundial: true,
+      pickaxe: 1, hammer: 1, hoe: 1, saw: 1, military: 0, armor: 0, agri: true, farmhouse: true, currency: true,
+      event: '', gov: 'democracy', trait: '', pet: 'cat', others: false, famine: false, income: false, protest: false, neighbours: true, graves: true, homeless: false, lowMorale: false,
+      wounded: 4, raid: 0, mercs: 0,
+      opt: { gray: false, pixelTrue: false, silhouette: false, slots: false, clone: false, night: false, grid: false, demo: false },
+      counts: { basic_housing: 10, cottage: 4, lodge: 2, smokehouse: 2, farm: 4, compost: 2, silo: 2, mill: 2, shed: 3, storage_yard: 1, lumber_yard: 2, sawmill: 1, rock_quarry: 1, mine: 1, coal_mine: 1, foundry: 1, smelter: 1, cement_plant: 1, metal_refinery: 1, trade: 2, bank: 1, library: 1, university: 1, temple: 1, amphitheatre: 1, garrison: 1, hospital: 1 },
+      fills: { Food: 60, Lumber: 50, Stone: 70, Furs: 40, Copper: 30, Iron: 30, Cement: 40, Coal: 40, Steel: 20, Money: 50, Plywood: 30, Brick: 30, Wrought_Iron: 20, Sheet_Metal: 20, Aluminium: 40 },
+      crafts: { Plywood: 1, Brick: 1, Wrought_Iron: 1, Sheet_Metal: 0 },
+      workers: { unemployed: 3, forager: 2, farmer: 6, hunter: 2, lumberjack: 4, quarry_worker: 3, miner: 3, coal_miner: 2, cement_worker: 2, craftsman: 3, teamster: 2, professor: 2, scientist: 2, priest: 1, banker: 1, entertainer: 2, soldier: 5, scavenger: 2 } };
+    function rowOf(title, els) { var r = h('div', { class: 'row' }); if (title) r.appendChild(h('span', { class: 'tiny', style: 'width:100%', text: title })); els.forEach(function (e) { r.appendChild(e); }); return r; }
+    function tg(key, label) { return toggle(label, function () { return S[key]; }, function (v) { S[key] = v; }); }
+    var g1 = rowOf(null, [seg('Tier', [[1, 'P1 Primitive'], [2, 'P2 Timber'], [3, 'P3 Masonry']], function () { return S.tier; }, function (v) { S.tier = v; }),
+     seg('Season', [[0, 'Spring'], [1, 'Summer'], [2, 'Autumn'], [3, 'Winter']], function () { return S.season; }, function (v) { S.season = v; }),
+     seg('Weather', [[0, 'Rain / snow'], [1, 'Cloudy'], [2, 'Sunny']], function () { return S.weather; }, function (v) { S.weather = v; }),
+     seg('Temperature', [[0, 'Cold'], [1, 'Mild'], [2, 'Hot']], function () { return S.temp; }, function (v) { S.temp = v; })]);
+    var g2 = rowOf(null, [seg('Scale', [[1, 'x1'], [2, 'x2'], [3, 'x3'], [4, 'x4']], function () { return S.scale; }, function (v) { S.scale = v; }),
+     select('Biome', Object.keys(X.BIOMES).filter(function (b) { return b.indexOf('+') < 0; }).map(function (b) { return [b, b]; }), function () { return S.biome; }, function (v) { S.biome = v; }),
+     h('div', { style: 'min-width:190px;flex:1;max-width:300px' }, [slider('Moon phase', 0, 27, function () { return S.moon; }, function (v) { S.moon = v; }, function (v) { return v + ' / 27' + (v === 0 ? ' · new' : v === 14 ? ' · full' : v < 14 ? ' · waxing' : ' · waning'); })])]);
+    var lv = function (k, label, opts) { return seg(label, opts, function () { return S[k]; }, function (v) { S[k] = v; }); };
+    var g4 = rowOf('Techs (tool metals: 0 stone, 1 bronze, 2 iron, 3 steel; tech.mining no longer sets the pick)', [lv('mining', 'tech.mining', [1, 2, 3, 4]), lv('pickaxe', 'pickaxe', [0, 1, 2, 3]), lv('hammer', 'hammer', [0, 1, 2, 3]), lv('hoe', 'hoe', [0, 1, 2, 3]), lv('saw', 'saw', [0, 1, 2, 3]),
+      lv('military', 'military', [0, 1]), lv('armor', 'armor', [0, 1, 2]), tg('agri', 'agriculture ≥ 2 · irrigation'), tg('farmhouse', 'farm ≥ 1 · farm house'), tg('currency', 'currency ≥ 2 · market'), tg('sundial', 'primitive ≥ 3 · sundial, calendar'),
+      h('button', { onclick: function () { F.tech.science = (F.tech.science | 0) + 1; } }, ['Finish a tech'])]);
+    var g5 = rowOf('Game state', [
+      select('event.l', [['', 'none'], ['fire', 'fire'], ['mine_collapse', 'mine_collapse'], ['raid', 'raid'], ['siege', 'siege'], ['pillage1', 'pillage1'], ['tax_revolt', 'tax_revolt'], ['spy', 'spy']], function () { return S.event; }, function (v) { S.event = v; }),
+      select('civic.govern.type', ['anarchy', 'autocracy', 'democracy', 'oligarchy', 'theocracy', 'republic', 'socialist', 'corpocracy', 'technocracy'].map(function (g) { return [g, g]; }), function () { return S.gov; }, function (v) { S.gov = v; }),
+      select('city.ptrait', [['', 'none'], ['flare', 'flare'], ['trashed', 'trashed'], ['permafrost', 'permafrost']], function () { return S.trait; }, function (v) { S.trait = v; }),
+      select('race.pet', [['', 'none'], ['cat', 'cat'], ['dog', 'dog']], function () { return S.pet; }, function (v) { S.pet = v; }),
+      tg('powered', 'city.powered (grid)'), tg('on', 'city.X.on > 0'), tg('expose', 'settings.expose'), tg('others', 'Other-race traits'), tg('famine', 'Famine (Food 0)'), tg('income', 'Income (+N)'),
+      tg('protest', 'Protest'), tg('neighbours', 'Neighbour camps'), tg('graves', 'stats.died'), tg('homeless', 'Homeless'), tg('lowMorale', 'Low morale')]);
+    var g3 = h('div', { class: 'seg' });
+    [toggle('Wind', function () { return !!S.wind; }, function (v) { S.wind = v ? 1 : 0; })]
+      .concat([['gray', 'Grayscale'], ['pixelTrue', 'x1 pixel-true'], ['silhouette', 'Silhouette'], ['slots', 'Show slots'], ['clone', 'Anti-clone check'], ['night', 'Night filter'], ['grid', 'Tile grid'], ['demo', 'Test shells']].map(function (o) {
+        return toggle(o[1], function () { return S.opt[o[0]]; }, function (v) { S.opt[o[0]] = v; }); }))
+      .concat([h('button', { onclick: function () { K.reward(); } }, ['Reward chest'])]).forEach(function (e) { g3.appendChild(e); });
+    [g1, g2, g4, g5, g3].forEach(function (e) { $('simCtl').appendChild(e); });
+    var vis = function (n) { return n <= 8 ? n : Math.min(24, 8 + Math.round(4 * Math.log2(n / 8))); }, wN = function (n) { return n > 0 ? Math.min(n, 1 + Math.ceil(Math.sqrt(n))) : 0; };
+    var sb = sgrid(170), sj = sgrid(170), sf = sgrid(170), sg = sgrid(170);
+    Object.keys(S.counts).forEach(function (k) { sb.appendChild(slider(NAME[k], 0, 128, function () { return S.counts[k]; }, function (v) { S.counts[k] = v; }, function (v) { return v + ' → ' + vis(v); })); });
+    Object.keys(S.workers).forEach(function (j) { sj.appendChild(slider(j, 0, 60, function () { return S.workers[j]; }, function (v) { S.workers[j] = v; }, function (v) { return v + ' → ' + wN(v); })); });
+    Object.keys(S.fills).forEach(function (r) { sf.appendChild(slider(r + ' fill', 0, 100, function () { return S.fills[r]; }, function (v) { S.fills[r] = v; }, function (v) { return v + '%'; })); });
+    [['wounded', 'garrison.wounded', 30], ['raid', 'garrison.raid', 30], ['mercs', 'garrison.m_use', 20]].forEach(function (q) { sg.appendChild(slider(q[1], 0, q[2], function () { return S[q[0]]; }, function (v) { S[q[0]] = v; }, function (v) { return v + ' → ' + wN(v); })); });
+    Object.keys(S.crafts).forEach(function (r) { sg.appendChild(slider('foundry.' + r, 0, 8, function () { return S.crafts[r]; }, function (v) { S.crafts[r] = v; })); });
+    [h('span', { class: 'tiny', text: 'Buildings (count → visible). Lodge, smokehouse, compost and temple only appear with other-race traits.' }), sb,
+     h('span', { class: 'tiny', text: 'Workers per job (count → visible). Hunter, forager, teamster, priest, scientist need other-race traits; scavenger needs the trashed trait.' }), sj,
+     h('span', { class: 'tiny', text: 'Garrison and foundry' }), sg, h('span', { class: 'tiny', text: 'Resource fill' }), sf].forEach(function (e) { $('simSliders').appendChild(e); });
+    var EVD = function () { return { mode: EV ? EV.mode : 'village', RNA: 5, DNA: -1, c: { membrane: -1, organelles: -1, nucleus: -1, eukaryotic_cell: -1, mitochondria: -1 }, stage: 0, final: -1, ev: '', evAt: -1e9, flipped: false, flipAt: 0, seed: EV ? EV.seed + 1 : 1 }; };
+    var EV = null; EV = EVD(); EV.mode = 'era0'; EV.RNA = 140; EV.DNA = 60; EV.c = { membrane: 6, organelles: 5, nucleus: 3, eukaryotic_cell: 2, mitochondria: 4 }; EV.stage = 3; EV.final = 40;
+    var FV = null, FIN = SK.evo.FINALS, CK = [['membrane', 'membrane'], ['organelles', 'organelles'], ['nucleus', 'nucleus'], ['eukaryotic_cell', 'eukaryotic_cell'], ['mitochondria', 'mitochondria']];
+    function rmax() { var mi = Math.max(0, EV.c.mitochondria); return 100 + Math.max(0, EV.c.membrane) * (5 + 5 * mi); }
+    function dmax() { var mi = Math.max(0, EV.c.mitochondria); return 100 + Math.max(0, EV.c.eukaryotic_cell) * (10 + 10 * mi); }
+    function flip(now) { FV = K.fakeState(); X.BUILDINGS.forEach(function (b) { FV.city[b.key].count = 0; }); Object.keys(FV.civic).forEach(function (j) { if (FV.civic[j] && FV.civic[j].workers != null) FV.civic[j].workers = 0; }); FV.civic.unemployed.workers = 1; FV.tech.primitive = 1; EV.flipped = true; EV.flipAt = now; K.handoff(); }
+    function era0State(now) {
+      var ev = {}; CK.forEach(function (k) { if (EV.c[k[0]] >= 0) ev[k[0]] = { count: EV.c[k[0]] }; }); if (EV.final >= 0) ev.final = EV.final;
+      var res = { RNA: { amount: Math.min(EV.RNA, rmax()), max: rmax() } }; if (EV.DNA >= 0) res.DNA = { amount: Math.min(EV.DNA, dmax()), max: dmax() };
+      var tech = {}; if (EV.stage > 0) tech.evo = EV.stage;
+      return { race: { species: 'protoplasm' }, seed: EV.seed, stats: { days: 0 }, city: { biome: S.biome, calendar: { day: 0 } }, resource: res, evolution: ev, tech: tech, event: { l: now - EV.evAt < 1500 ? EV.ev : false } };
+    }
+    function drawEvo() {
+      var box = $('evoCtl'); box.innerHTML = '';
+      box.appendChild(rowOf(null, [seg('Simulator mode', [['village', 'Village (Era 1)'], ['era0', 'Era 0 · evolution']], function () { return EV.mode; }, function (v) { EV.mode = v; EV.flipped = false; SK.evo.reset(); drawEvo(); })]));
+      if (EV.mode !== 'era0') return;
+      box.appendChild(rowOf('Era 0 state (race.species = protoplasm). Maxima follow the game: RNA 100 + membranes × (5 + 5 × mito), DNA 100 + eukaryotes × (10 + 10 × mito). −1 = key absent.', [
+        seg('tech.evo (stage)', [[0, 'absent'], 1, 2, 3, 4, 5, 6, 7], function () { return EV.stage; }, function (v) { EV.stage = v; if (v >= 2 && EV.final < 0) EV.final = FIN[v]; }),
+        h('button', { onclick: function () { var now = performance.now(); if (EV.stage === 0) { EV.stage = 1; CK.forEach(function (k) { if (EV.c[k[0]] < 0) EV.c[k[0]] = 0; }); } else if (EV.stage < 7) { EV.stage++; EV.final = FIN[EV.stage]; if (EV.DNA < 0) EV.DNA = 0; } else flip(now); drawEvo(); } }, ['Evolve one stage']),
+        h('button', { onclick: function () { EV.ev = 'dna_replication'; EV.evAt = performance.now(); } }, ['Fire dna_replication']),
+        h('button', { onclick: function () { EV.ev = 'rna_meteor'; EV.evAt = performance.now(); } }, ['Fire rna_meteor']),
+        h('button', { onclick: function () { if (!EV.flipped) flip(performance.now()); } }, ['Play hand-over']),
+        h('button', { onclick: function () { var m = EV.mode; EV = EVD(); EV.mode = m; FV = null; drawEvo(); } }, ['Restart'])]));
+      var g = sgrid(170);
+      g.appendChild(slider('resource.RNA.amount', 0, 1000, function () { return EV.RNA; }, function (v) { EV.RNA = v; }, function (v) { return Math.min(v, rmax()) + ' / ' + rmax(); }));
+      g.appendChild(slider('resource.DNA.amount', -1, 1000, function () { return EV.DNA; }, function (v) { EV.DNA = v; }, function (v) { return v < 0 ? 'absent' : Math.min(v, dmax()) + ' / ' + dmax(); }));
+      CK.forEach(function (k) { g.appendChild(slider(k[1] + '.count', -1, 40, function () { return EV.c[k[0]]; }, function (v) { EV.c[k[0]] = v; }, function (v) { return v < 0 ? 'absent' : v > 24 ? v + ' (24 drawn + density)' : String(v); })); });
+      g.appendChild(slider('evolution.final', -1, 100, function () { return EV.final; }, function (v) { EV.final = v; }, function (v) { return v < 0 ? 'absent' : v + ' %'; }));
+      box.appendChild(g);
+      box.appendChild(h('div', { class: 'tiny', text: 'Season, weather, buildings and workers below only drive the village. Biome, scale and the view toggles (grayscale, x1 pixel-true, silhouette) apply to both modes.' }));
+    }
+    drawEvo();
+    var cv = $('sim'); K.init(cv, { scale: S.scale }); var F = K.fakeState(), last = 0, lastInc = 0;
+    var OTHER = ['hunter', 'forager', 'priest', 'scientist', 'teamster'];
+    (function tick(now) {
+      var c = F.city, cv2 = F.civic; c.calendar.season = S.season; c.calendar.weather = S.weather; c.calendar.temp = S.temp; c.calendar.wind = S.wind; c.calendar.moon = S.moon; c.calendar.day = S.sundial ? 120 + Math.floor(now / 5000) : 0; c.biome = S.biome;
+      c.powered = S.powered; c.ptrait = S.trait ? [S.trait] : []; c.homeless = S.homeless ? 3 : 0; c.morale = { current: S.lowMorale ? 80 : 110 };
+      Object.keys(S.counts).forEach(function (k) { c[k] = c[k] || {}; c[k].count = S.counts[k]; c[k].on = S.on ? S.counts[k] : 0; });
+      Object.keys(S.crafts).forEach(function (r) { c.foundry[r] = S.crafts[r]; });
+      Object.keys(S.workers).forEach(function (j) { var key = j === 'soldier' ? 'garrison' : j; cv2[key] = cv2[key] || {}; cv2[key].workers = S.workers[j]; });
+      OTHER.forEach(function (j) { cv2[j].display = S.others; }); cv2.scavenger.display = S.others || S.trait === 'trashed';
+      F.race = S.others ? { carnivore: true, detritivore: true, gravity_well: true } : {}; if (S.pet) F.race.pet = { type: S.pet };
+      cv2.garrison.wounded = S.wounded; cv2.garrison.raid = S.raid; cv2.garrison.m_use = S.mercs;
+      cv2.govern = { type: S.gov, protest: S.protest ? 3 : 0 }; F.event = { l: S.event || false };
+      cv2.foreign = S.neighbours ? { gov0: { hstl: 75 }, gov1: { hstl: 15 }, gov2: { hstl: 45 } } : {};
+      F.stats = { died: S.graves ? 24 : 0 };
+      if (S.income && now - lastInc > 1000) { lastInc = now; ['Food', 'Lumber', 'Stone'].forEach(function (r) { S.fills[r] = S.fills[r] > 94 ? 10 : S.fills[r] + 3; }); }
+      Object.keys(S.fills).forEach(function (r) { F.resource[r] = F.resource[r] || { max: 200 }; F.resource[r].amount = S.fills[r] * F.resource[r].max / 100; });
+      if (S.famine) { F.resource.Food.amount = 0; F.resource.Food.diff = -2; } else delete F.resource.Food.diff;
+      var T = F.tech; T.axe = S.tier >= 2 ? 2 : 1; T.cement = S.tier >= 3 ? 1 : 0; T.housing = S.counts.cottage ? 2 : 1; T.mining = S.mining; T.primitive = S.sundial ? 3 : 2;
+      T.pickaxe = S.pickaxe; T.hammer = S.hammer; T.hoe = S.hoe; T.saw = S.saw; T.military = S.military; T.armor = S.armor; T.agriculture = S.agri ? 2 : 1; T.farm = S.farmhouse ? 1 : 0; T.currency = S.currency ? 2 : 0; T.theology = S.others ? 2 : 0;
+      K.setOptions(Object.assign({ scale: S.scale, badge: !S.expose }, S.opt));
+      var ST = F;
+      if (EV.mode === 'era0') { if (EV.flipped && FV) { FV.city.biome = S.biome; FV.city.basic_housing.count = now - EV.flipAt > 7000 ? 1 : 0; ST = FV; } else ST = era0State(now); }
+      K.render(ST, last ? Math.min(250, now - last) : 16); last = now; requestAnimationFrame(tick);
+    })(0);
+
+    /* 05 self-check */
+    var ch = X.selfCheck(), box = $('check');
+    box.appendChild(h('div', { style: 'display:flex;align-items:baseline;gap:12px;flex-wrap:wrap' }, [h('span', { class: 'mono', style: 'font-size:32px;font-weight:700', text: ch.total + ' / ' + ch.target }),
+      h('span', { class: 'lead', text: 'hand-drawn pieces (' + ch.baseTotal + ' from batches 1–7 + ' + ch.b8 + ' from Batch 8 + ' + ch.b9 + ' from Batch 9 · Era 0: ' + Object.keys(ch.era0).map(function (k) { return k + ' ' + (ch.counts[k] || 0); }).join(', ') + ') · ' + ch.scanned.toLocaleString() + ' generated pixels scanned for palette purity' })]));
+    var cg = h('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:8px' });
+    Object.keys(ch.expected).forEach(function (k) { var n = ch.counts[k] || 0; cg.appendChild(h('div', { class: 'card mono', style: 'flex-direction:row;justify-content:space-between;font-size:13px' + (ch.era0[k] ? ';border-color:var(--acc)' : '') }, [h('span', { text: k + (ch.era0[k] ? ' · era 0' : '') }), h('span', { style: 'color:' + (n === ch.expected[k] ? 'var(--ok)' : 'var(--mute)'), text: n + ' / ' + ch.expected[k] })])); });
+    box.appendChild(cg);
+    function list(title, items) { return h('div', { class: 'card' }, [h('b', { text: title })].concat(items.map(function (t) { return h('span', { class: 'mono', style: 'font-size:12px;color:var(--soft);overflow-wrap:anywhere', text: t }); }))); }
+    var two = h('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px' });
+    two.appendChild(list('Issues (pixels outside the palette, row widths, unknown chars, non-90° rotations)', ch.issues.length ? ch.issues : ['None.']));
+    two.appendChild(list('Craft notes', (ch.notes.length ? ch.notes : ['No isolated pixels.']).concat(SK.village.report())));
+    box.appendChild(two);
+  }
+  (function wait() { if (window.SpriteKit && window.SpriteKit.isReady()) boot(); else setTimeout(wait, 30); })();
+})();
+</script>
+
+
+</body></html>

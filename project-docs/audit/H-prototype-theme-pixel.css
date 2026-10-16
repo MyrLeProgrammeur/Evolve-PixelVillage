@@ -1,0 +1,249 @@
+/* ==========================================================================
+   H-prototype-theme-pixel.css  --  PROTOTYPE, UNTESTED, NOT APPLIED TO THE REPOSITORY
+   "Pixel" theme layer for Evolve 1.4.10 (Anki fork). To be loaded AFTER evolve/evolve.css.
+   Zero dependencies: no external font, image or URL. The 9-slice images are set by JS
+   in CSS variables (--px-*) from the kit; without JS, layer A (CSS only) is enough.
+
+   Activation: <html data-skin="pixel">. DO NOT use a class: setTheme() (src/index.js:138)
+   calls $('html').removeClass() and would erase "html.pixel" on every theme change.
+   data-* attributes are not touched by removeClass().
+
+   Layers:
+     A  (always)             : palette, "cut corner" frames via box-shadow, button hierarchy.
+     B  ([data-px="ready"])  : the JS has set --px-btn-*, --px-panel, --px-bar-*... (kit data URIs).
+     M  (@media max-width)   : mobile, one column, scrolling unlocked, targets >= 44 px.
+   Specificity: the game's themes write "html.dark .button {...}" (0,2,1). We write
+   "html[data-skin="pixel"] .button" (0,2,1) and load afterwards: we win on a tie, and
+   we add "body" when the game is more specific.
+   ========================================================================== */
+
+html[data-skin="pixel"] {
+  /* pixel unit: 1 kit pixel = --u CSS pixels (integer! otherwise blurry/irregular) */
+  --u: 2px;
+  /* kit palette (palette.js, tones 0..4 -> light..dark) */
+  --px-ink: #2a1f2b;
+  --px-cream0: #fffaeb; --px-cream1: #f1e2bf; --px-cream2: #cdb991; --px-cream3: #978464;
+  --px-walnut2: #66402d; --px-walnut3: #452a21; --px-walnut4: #2b1b18;
+  --px-oak1: #c98e52; --px-oak3: #6e4329;
+  --px-saffron1: #f4bd45; --px-saffron2: #d48d2a; --px-saffron3: #9c5d1f; --px-saffron4: #613818;
+  --px-sage1: #adbd85; --px-sage2: #7f9360; --px-sage3: #566643;
+  --px-madder1: #df6250; --px-madder2: #b23f3c; --px-madder3: #7c2a33;
+  --px-teal1: #57b8a6; --px-teal2: #36897f; --px-teal3: #255d5a;
+  --px-ashen1: #a39b94; --px-ashen2: #79726e; --px-ashen3: #524d4c;
+  --px-font-display: "KitPixel", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; /* if absent -> fallback */
+  --px-font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;               /* paragraphs: READABILITY */
+}
+
+/* ---------- Base background and text (layer A) ------------------------------------------------
+   The game's themes set the html background (@html-background). We only replace it if the user
+   explicitly chooses the skin; their themes remain usable: data-skin does not touch the text
+   colours of .has-text-*, only frames and buttons. */
+html[data-skin="pixel"] body { image-rendering: auto; }
+html[data-skin="pixel"] h2,
+html[data-skin="pixel"] .content h2,
+html[data-skin="pixel"] .modalTitle,
+html[data-skin="pixel"] .tabs a,
+html[data-skin="pixel"] .action a.button .aTitle,
+html[data-skin="pixel"] .resource .res,
+html[data-skin="pixel"] .job_label h3 {
+  font-family: var(--px-font-display);       /* titles, names, numbers: pixel font; the rest stays in system-ui */
+  letter-spacing: .02em;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+html[data-skin="pixel"] .resource .count,
+html[data-skin="pixel"] .resource .diff,
+html[data-skin="pixel"] .action .count,
+html[data-skin="pixel"] .topBar .year,
+html[data-skin="pixel"] .topBar .day { font-family: var(--px-font-display); font-variant-numeric: tabular-nums; }
+
+/* ---------- BUTTONS: 6-level hierarchy (layer A, CSS only) --------------------------------------
+   Real states set by the game (src/actions.js:6235-6243, src/main.js:8162-8180, 10683-10700):
+     .action                : container of a build / research / evolution button
+     .action.cna            : "can not afford" = not affordable RIGHT NOW
+     .action.cnam           : "can not afford, max" = not affordable even with full storage (cap too low)
+     .action.hl             : "highlight" (active building / choice in progress per c_action.highlight())
+     .action.precog         : prediction (precog)
+   The inner button is <a class="button is-dark res-Food res-Lumber ... [hl-ca|hl-cna]">.            */
+
+/* level 1 - PRIMARY: "I can do it now" = .action without .cna */
+html[data-skin="pixel"] body .main .content .action:not(.cna) a.button {
+  background: var(--px-saffron1); color: var(--px-ink); border: 0;
+  box-shadow: 0 calc(var(--u)*-1) 0 0 var(--px-saffron3) inset,                /* dark bottom edge = volume */
+              0 var(--u) 0 0 var(--px-saffron4),                                  /* button "edge" */
+              var(--u) 0 0 0 var(--px-walnut3), calc(var(--u)*-1) 0 0 0 var(--px-walnut3),
+              0 calc(var(--u)*-1) 0 0 var(--px-walnut3), 0 calc(var(--u)*2) 0 0 var(--px-walnut3); /* selective outline, cut corners */
+  font-weight: 700;
+}
+/* level 2 - SECONDARY: not affordable yet, but will be (enough storage) = .cna:not(.cnam) */
+html[data-skin="pixel"] body .main .content .action.cna:not(.cnam) a.button {
+  background: var(--px-cream1); color: var(--px-walnut3); font-weight: 400;
+  box-shadow: 0 calc(var(--u)*-1) 0 0 var(--px-cream3) inset,
+              var(--u) 0 0 0 var(--px-walnut2), calc(var(--u)*-1) 0 0 0 var(--px-walnut2),
+              0 calc(var(--u)*-1) 0 0 var(--px-walnut2), 0 var(--u) 0 0 var(--px-walnut2);
+}
+/* level 5 - DISABLED / TOO EXPENSIVE: storage cap insufficient = .cnam (cna is also set) */
+html[data-skin="pixel"] body .main .content .action.cnam a.button {
+  background: var(--px-ashen1); color: var(--px-ashen3); opacity: 1; font-weight: 400;
+  box-shadow: var(--u) 0 0 0 var(--px-ashen3), calc(var(--u)*-1) 0 0 0 var(--px-ashen3),
+              0 calc(var(--u)*-1) 0 0 var(--px-ashen3), 0 var(--u) 0 0 var(--px-ashen3);
+  background-image: repeating-linear-gradient(45deg, transparent 0 4px, rgba(0,0,0,.06) 4px 6px); /* hatching = bar, not just colour (colour blindness) */
+}
+/* level 6 - IN PROGRESS / ACTIVE: buildings whose highlight() is true */
+html[data-skin="pixel"] body .main .content .action.hl a.button {
+  outline: var(--u) dashed var(--px-teal1); outline-offset: calc(var(--u)*1);
+}
+/* the themes colour the .aTitle of .cnam (@cnam-aTitle, evolve.less:1461): on our light backgrounds this theme grey/red
+   can become unreadable, so we force the button's colour (to be checked theme by theme) */
+html[data-skin="pixel"] body .main .content .action.cnam span.aTitle,
+html[data-skin="pixel"] body .main .content .action:not(.cnam) span.aTitle { color: inherit; }
+/* research already done */
+html[data-skin="pixel"] .main .content .action span.oldTech { background: var(--px-cream1); color: var(--px-walnut3); border: var(--u) solid var(--px-walnut2); }
+
+/* the game already colours .aTitle green/red when hovering a resource (.hl-ca / .hl-cna): we keep it, with contrast */
+html[data-skin="pixel"] .main .content .action a.button.hl-cna .aTitle { text-decoration: underline wavy var(--px-madder2); }
+
+/* level 3 - TERTIARY: utility buttons outside .action (settings, import/export, apply, the craftsmen's "A") */
+html[data-skin="pixel"] body .button:not(.is-dark),
+html[data-skin="pixel"] .basic-button,
+html[data-skin="pixel"] .market-item .order {
+  background: transparent; color: inherit; border: var(--u) solid currentColor; border-radius: 0;
+  box-shadow: none;
+}
+/* level 4 - DANGER: reset, remove, "-" */
+html[data-skin="pixel"] body .reset .button,
+html[data-skin="pixel"] body .button.has-text-danger,
+html[data-skin="pixel"] .sub {
+  background: var(--px-madder1); color: #fff; border: var(--u) solid var(--px-madder3); border-radius: 0;
+}
+html[data-skin="pixel"] .add { border: var(--u) solid var(--px-sage3); border-radius: 0; }
+
+/* native disabled button */
+html[data-skin="pixel"] .button[disabled], html[data-skin="pixel"] .button.is-disabled { opacity: .55; filter: grayscale(1); }
+
+/* touch feedback: 1-pixel press */
+html[data-skin="pixel"] .action a.button:active { transform: translateY(var(--u)); transition: none; }
+html[data-skin="pixel"] .button { transition: none; }       /* the game's transition: all 200ms (evolve.less:2387) blurs the pixel effect */
+html[data-skin="pixel"] .main .content .action a.button,
+html[data-skin="pixel"] .main .content .action span.oldTech { border-radius: 0; }
+
+/* button badges: counter, gear, on/off */
+html[data-skin="pixel"] .action .count,
+html[data-skin="pixel"] .action div.special,
+html[data-skin="pixel"] .action span.on,
+html[data-skin="pixel"] .action span.off {
+  border-radius: 0; border: var(--u) solid var(--px-walnut3); background: var(--px-cream0); color: var(--px-ink);
+}
+
+/* ---------- FRAMES / PANELS (layer A) ------------------------------------------------------- */
+html[data-skin="pixel"] .modalBox, html[data-skin="pixel"] .industry, html[data-skin="pixel"] .arpaProject,
+html[data-skin="pixel"] .main > div.popper, html[data-skin="pixel"] body .modal > div.popper {
+  border-radius: 0; border: var(--u) solid var(--px-walnut3);
+  box-shadow: 0 var(--u) 0 0 var(--px-walnut4), inset 0 0 0 var(--u) var(--px-oak1);   /* wooden frame with a double line */
+}
+html[data-skin="pixel"] .modal .modal-content { border-radius: 0; box-shadow: none; }
+html[data-skin="pixel"] .tabs a { border-radius: 0; }
+
+/* ---------- PROGRESS BARS <progress class="progress"> ------------------------------------------
+   (evolving: actions.js:8108 ; arpa: arpa.js:1796, 2444 ; repair: actions.js:6316 ; training: civics.js:1206) */
+html[data-skin="pixel"] progress.progress {
+  -webkit-appearance: none; appearance: none; border-radius: 0; height: calc(var(--u)*5);
+  border: var(--u) solid var(--px-walnut3); background: var(--px-cream1);
+}
+html[data-skin="pixel"] progress.progress::-webkit-progress-bar { background: var(--px-cream1); border-radius: 0; }
+html[data-skin="pixel"] progress.progress::-webkit-progress-value {
+  border-radius: 0; background: repeating-linear-gradient(90deg, var(--px-sage2) 0 calc(var(--u)*3), var(--px-sage1) calc(var(--u)*3) calc(var(--u)*4));
+}
+html[data-skin="pixel"] progress.progress::-moz-progress-bar { border-radius: 0; background: var(--px-sage2); }
+
+/* resource bars (.resource.showBar, evolve.less:1639): hard edge instead of the 2 px gradient */
+html[data-skin="pixel"] .resource.showBar.prime,
+html[data-skin="pixel"] .resource.showBar.alt {
+  background-image: linear-gradient(to right, transparent var(--percent-full), rgba(35,22,18,.25) var(--percent-full));
+}
+
+/* ---------- LAYER B: kit images set by JS (data URI) ----------------------------------------------
+   The JS sets on <html>: --px-btn-main/--px-btn-alt/--px-btn-danger/--px-btn-off (url(data:image/png...))
+   from SK.ui + X.sprite('ui_button', map).canvas().toDataURL(), and --px-panel (ui_panel).
+   border-image-slice = 5 (ui_button, 16x16, slice 5) ; = 8 (ui_panel, 24x24, slice 8).               */
+html[data-skin="pixel"][data-px="ready"] body .main .content .action:not(.cna) a.button {
+  border: calc(5*var(--u)) solid transparent; border-image: var(--px-btn-main) 5 fill / calc(5*var(--u)) / 0 round;
+  box-shadow: none; background: none; image-rendering: pixelated; padding: 0 calc(2*var(--u));
+}
+html[data-skin="pixel"][data-px="ready"] body .main .content .action.cna:not(.cnam) a.button {
+  border: calc(5*var(--u)) solid transparent; border-image: var(--px-btn-alt) 5 fill / calc(5*var(--u)) / 0 round;
+  box-shadow: none; background: none; image-rendering: pixelated;
+}
+html[data-skin="pixel"][data-px="ready"] body .main .content .action.cnam a.button {
+  border: calc(5*var(--u)) solid transparent; border-image: var(--px-btn-off) 5 fill / calc(5*var(--u)) / 0 round;
+  box-shadow: none; background: none; image-rendering: pixelated;
+}
+html[data-skin="pixel"][data-px="ready"] .modalBox,
+html[data-skin="pixel"][data-px="ready"] .industry,
+html[data-skin="pixel"][data-px="ready"] .main > div.popper,
+html[data-skin="pixel"][data-px="ready"] body .modal > div.popper {
+  border: calc(8*var(--u)) solid transparent; border-image: var(--px-panel) 8 fill / calc(8*var(--u)) / 0 round;
+  box-shadow: none; image-rendering: pixelated; background: none;
+}
+
+/* ---------- MOBILE (layer M) ---------------------------------------------------------------------
+   Bulma already stacks .columns below 769 px (display:flex only from 769 px); what breaks everything
+   is: html{overflow-y:hidden} (evolve.less:2342) + heights of calc(100vh - N rem) + .sticky{height:100vh}.
+   We unlock PAGE scrolling and put the areas back to automatic height.                 */
+@media (max-width: 768px) {
+  html[data-skin="pixel"] { --u: 2px; overflow-y: auto; -webkit-text-size-adjust: 100%; }
+  html[data-skin="pixel"] body { overflow-x: hidden; padding-bottom: calc(56px + env(safe-area-inset-bottom)); } /* room for the tab bar */
+  html[data-skin="pixel"] .main { margin: 2rem .5rem 1rem; overflow: visible; }
+  html[data-skin="pixel"] .main .leftColumn,
+  html[data-skin="pixel"] .main .resources,
+  html[data-skin="pixel"] .main .mtab,
+  html[data-skin="pixel"] .main .content .settings,
+  html[data-skin="pixel"] .main #evolution,
+  html[data-skin="pixel"] .main .resTabs > section,
+  html[data-skin="pixel"] .main .govTabs2 > section,
+  html[data-skin="pixel"] .main .msgQueue.right,
+  html[data-skin="pixel"] #hellTabs > section,
+  html[data-skin="pixel"] #hellAnalysis { height: auto; max-height: none; }
+  html[data-skin="pixel"] .sticky { position: static; height: auto; overflow: visible; }
+  html[data-skin="pixel"] .main .resources { max-height: 40vh; overflow-y: auto; }   /* per-area scrolling: resources */
+  html[data-skin="pixel"] .main .msgQueue, html[data-skin="pixel"] .main .bldQueue { height: 6rem; }
+  html[data-skin="pixel"] .main > .columns > :first-child { min-width: 0; }
+
+  /* action buttons: 2 per row (instead of a fixed 12.625rem), targets >= 44 px */
+  html[data-skin="pixel"] .main .content .action { display: inline-block; width: calc(50% - .25rem); }
+  html[data-skin="pixel"] .main .content .action a.button,
+  html[data-skin="pixel"] .main .content .action span.oldTech { width: calc(100% - .25rem); min-height: 44px; height: auto; margin: .25rem .25rem 0 0; white-space: normal; }
+  html[data-skin="pixel"] .main .content .action div.special,
+  html[data-skin="pixel"] .main .content .action span.on,
+  html[data-skin="pixel"] .main .content .action span.off { min-width: 32px; height: 28px; line-height: 24px; }  /* small corner buttons: 32x28; see doubts (44 px impossible without moving them) */
+  html[data-skin="pixel"] .job { min-width: 0; }
+  html[data-skin="pixel"] .job_label :first-child { width: 7rem; }
+  html[data-skin="pixel"] .add, html[data-skin="pixel"] .sub { min-width: 44px; min-height: 44px; line-height: 44px; text-align: center; padding: 0; }
+  html[data-skin="pixel"] .market-item { margin-left: 0; flex-wrap: wrap; }
+  html[data-skin="pixel"] .modal .modal-content { min-width: 0; width: calc(100vw - 1rem); margin: 0 auto; }
+  html[data-skin="pixel"] .modal .modalBody { max-height: calc(100vh - 6rem); overflow-y: auto; }
+  html[data-skin="pixel"] .industry { width: 100%; }
+  html[data-skin="pixel"] .arpaProject { width: 100%; }
+  html[data-skin="pixel"] .promoBar { display: none; }                                  /* external links: frees the bottom */
+
+  /* main tabs as a bottom bar (div.b-tabs#mainTabs > nav.tabs: Buefy structure to be checked) */
+  html[data-skin="pixel"] #mainTabs > nav.tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0; overflow-x: auto;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--px-walnut4); border-top: calc(var(--u)*2) solid var(--px-oak3);
+  }
+  html[data-skin="pixel"] #mainTabs > nav.tabs ul { display: flex; margin: 0; border: 0; }
+  html[data-skin="pixel"] #mainTabs > nav.tabs li { flex: 1 0 auto; }
+  html[data-skin="pixel"] #mainTabs > nav.tabs a { min-height: 52px; min-width: 56px; justify-content: center; padding: .25em .6em; color: var(--px-cream1); border: 0; }
+  html[data-skin="pixel"] #mainTabs > nav.tabs li.is-active a { background: var(--px-saffron1); color: var(--px-ink); box-shadow: inset 0 calc(var(--u)*-2) 0 var(--px-saffron3); }
+}
+
+/* very small screens: 1 button per row */
+@media (max-width: 380px) {
+  html[data-skin="pixel"] .main .content .action { width: 100%; }
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html[data-skin="pixel"] * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}

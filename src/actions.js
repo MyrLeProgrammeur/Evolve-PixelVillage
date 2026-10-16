@@ -909,6 +909,10 @@ export const actions = {
                     if (global.stats.achieve[`extinct_${global.race.species}`] && global.stats.achieve[`extinct_${global.race.species}`].l >= 1){
                         global.race.species = allowed[Math.floor(seededRandom(0,allowed.length))];
                     }
+                    /* [anki-fork] humanoid genus always gives the human species */
+                    if (type === 'humanoid' && allowed.includes('human')){
+                        global.race.species = 'human';
+                    }
 
                     sentience();
                 }

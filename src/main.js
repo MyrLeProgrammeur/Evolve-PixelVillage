@@ -12974,18 +12974,7 @@ function spyCaught(i){
     }
 }
 
-intervals['version_check'] = setInterval(function(){
-    $.ajax({
-        url: 'https://pmotschmann.github.io/Evolve/package.json',
-        type: 'GET',
-        dataType: 'json',
-        success: function(res){
-            if (res['version'] && res['version'] != global['version'] && !global['beta']){
-                $('#topBar .version > a').html(`<span class="has-text-warning">${loc(`update_avail`)}</span> v`+global.version+revision);
-            }
-        }
-    });
-}, 900000);
+/* [anki-fork] version check against github.io removed: the game makes no outbound request */
 
 let changeLog = $(`<div class="infoBox"></div>`);
 popover('versionLog',getTopChange(changeLog),{ wide: true });
@@ -12993,3 +12982,12 @@ popover('versionLog',getTopChange(changeLog),{ wide: true });
 if (global.race['start_cataclysm']){
     start_cataclysm();
 }
+
+/* [anki-fork] hook for the Anki link: credits a resource through the game's own modRes (respects caps).
+   Returns the amount actually added, or 0 when the resource is not visible yet. Era 1 plumbing only; the Anki side is a separate job. */
+window.ankiCredit = function(res, amount){
+    if (!global.resource[res] || !global.resource[res].display || !(amount > 0)){ return 0; }
+    let before = global.resource[res].amount;
+    modRes(res, amount, true);
+    return global.resource[res].amount - before;
+};

@@ -1,0 +1,64 @@
+--- a/kit/spritekit.js
++++ b/kit/spritekit.js
+@@ -358,6 +358,13 @@
+       if (nb.indexOf(v) < 0) { var best = 0; nb.forEach(function (q) { if (q) best = q; }); if (best) T[i] = best; } }
+     var base = [0, R(grass, winter ? 0 : 1), R(dirt, 1), R(dirt, 0), R(water, 2), R(rock, 1), R(dirt, 2)];
+     for (i = 0; i < T.length; i++) if (T[i]) p.d[i] = base[T[i]];
++    /* [anki-fork] full ground: outside the 24x24 diamond the world is meadow (mountains stay as the far backdrop), no floating island */
++    var OUT = new Uint8Array(WW * WH), yH = new Int16Array(WW);
++    for (px = 0; px < WW; px++) yH[px] = NY + 86 + Math.round(vnoise(px / 38, 5, 3) * 18);
++    for (py = NY; py < WH; py++) for (px = 0; px < WW; px++) {
++      i = py * WW + px; if (T[i] || py < yH[px]) continue;
++      OUT[i] = 1; T[i] = 1; p.d[i] = base[1];
++    }
+     function stamp(sh, sx, sy, ty, ramp, fl) {
+       for (var j = 0; j < sh.length; j++) for (var k = 0; k < sh[j].length; k++) {
+         var ch = sh[j][k]; if (ch === '.') continue; var x = sx + k, y = sy + j; if (x < 0 || y < 0 || x >= WW || y >= WH) continue;
+@@ -366,7 +373,7 @@
+       }
+     }
+     var fmul = (B.flowers || 1) * S.flowers;
+-    for (var cy = NY; cy < NY + 388; cy += 4) for (var cx = 0; cx < WW; cx += 6) {
++    for (var cy = NY; cy < WH; cy += 4) for (var cx = 0; cx < WW; cx += 6) {
+       px = cx + (ih(cx, cy, 1) * 6 | 0); py = cy + (ih(cx, cy, 2) * 4 | 0); if (py >= WH) continue;
+       var ty = T[py * WW + px]; if (!ty) continue;
+       var r = ih(cx, cy, 3), fl = FLOWERS[ih(cx, cy, 4) * FLOWERS.length | 0], X = px - 1, Y = py - 1;
+@@ -397,17 +404,28 @@
+       else { p.d[i] = R(water, bt); if (wave) waves.push(i, ((px + 2 * py) >> 3) & 3, bt); }
+     }
+     for (i = WW; i < T.length - WW; i++) if (T[i] && T[i] !== 4 && T[i + WW] === 4) p.d[i] = winter ? R('snow', 3) : R(dirt, 3);
+-    for (px = 0; px < WW; px++) {
+-      var yb = -1; for (py = NY + 390; py >= NY; py--) if (T[py * WW + px]) { yb = py; break; }
+-      if (yb < 0) continue;
+-      var off = px < NX ? 0 : 1, wav = Math.round(vnoise(px / 9, 3, 5) * 2);
+-      for (var k = 1; k <= 14; k++) {
+-        var c = k <= 2 ? R(lip, 2 + off) : (k <= 6 + wav ? R(dirt, 1 + off) : R(dirt, 2 + off));
+-        if (k > 3 && k < 13 && ih(px >> 2, (k + ((px >> 2) & 1)) >> 1, 9) < 0.12) c = R(rock, 1 + off);
+-        if (k === 14) c = R(dirt, 4);
+-        p.set(px, yb + k, c);
++    /* [anki-fork] far forest and meadow props outside the map, drawn into the terrain layer (behind every building and citizen) */
++    (function () {
++      var fol = winter ? 'frost' : (B.tree || S.tree), pine = (B.tree && B.tree !== 'lush' && B.tree !== 'frost') ? B.tree : 'conifer', dens = (B.hot ? 0.5 : 1) * (B.snow ? 1.1 : 1), list = [];
++      for (var gy = yH[0] + 6; gy < WH + 20; gy += 10) for (var gx = -6; gx < WW + 6; gx += 11) {
++        var jx = Math.round(gx + (ih(gx, gy, 71) - 0.5) * 9), jy = Math.round(gy + (ih(gx, gy, 72) - 0.5) * 8);
++        if (jx < 0 || jx >= WW || jy < 0 || jy >= WH) continue;
++        var q = jy * WW + jx; if (!OUT[q] || jy < yH[jx] + 4) continue;
++        var rx2 = jx + 0.5 - NX, ry2 = jy + 0.5 - NY, fx2 = (rx2 / 16 + ry2 / 8) / 2, fy2 = (ry2 / 8 - rx2 / 16) / 2;
++        var d2 = Math.min(fx2, fy2, MAPN - fx2, MAPN - fy2);           /* tiles outside the map edge (negative inside) */
++        if (d2 > -0.8) continue;
++        var near = Math.min(1, (-d2 - 0.8) / 3), back = Math.max(0, 1 - (jy - yH[jx]) / 60), r = ih(jx, jy, 73);
++        var pr = (0.18 + 0.55 * near + 0.3 * back) * dens;
++        if (r > pr) { if (r < pr + 0.05 && d2 < -1.5) list.push({ n: 'bush', x: jx, y: jy, m: { FOLIAGE: fol, WOOD: 'walnut' } }); continue; }
++        var k = ih(jx, jy, 74), kind = B.tree === 'dry' || B.tree === 'ashleaf' || B.tree === 'scorch' ? (k < 0.5 ? 'tree_dead' : 'tree_broadleaf') : (k < 0.5 ? 'tree_pine' : (winter ? 'tree_dead' : 'tree_broadleaf'));
++        list.push({ n: kind, x: jx, y: jy, m: kind === 'tree_pine' ? { FOLIAGE: pine, WOOD: 'walnut' } : kind === 'tree_dead' ? { WOOD: 'walnut' } : { FOLIAGE: fol, WOOD: 'oak' }, f: ih(jx, jy, 75) < 0.5 });
+       }
+-    }
++      list.sort(function (a, b2) { return a.y - b2.y || a.x - b2.x; });
++      list.forEach(function (o) {
++        var d = SK.PIECES[o.n], sp = sprite(o.n, o.m, { flip: !!o.f }), ax = o.f ? d.w - 1 - d.anchor[0] : d.anchor[0];
++        p.blit(sp, o.x - ax, o.y - d.anchor[1]);
++      });
++    })();
+     var out = { pix: p, T: T, waves: waves, water: water, frozen: frozen, season: season, biome: biome };
+     TERR.set(key, out); return out;
+   }

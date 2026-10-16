@@ -1529,6 +1529,8 @@ if (typeof global.settings.sPackMsg === 'undefined'){
 if (typeof global.settings.expose === 'undefined'){
     global.settings['expose'] = false;
 }
+/* [anki-fork] the sprite view reads window.evolve.global: expose is always on */
+global.settings['expose'] = true;
 if (typeof global.settings.alwaysPower === 'undefined'){
     global.settings['alwaysPower'] = false;
 }
