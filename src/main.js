@@ -22,7 +22,7 @@ import { index, mainVue, initTabs, loadTab } from './index.js';
 import { setWeather, seasonDesc, astrologySign, astroVal } from './seasons.js';
 import { getTopChange } from './wiki/change.js';
 import { enableDebug, updateDebugData } from './debug.js';
-import { ankiClockGate, ankiMaybeSave } from './anki.js';
+import { ankiClockGate, ankiMaybeSave, ankiMorale } from './anki.js';
 
 {
     $(document).ready(function() {
@@ -3120,6 +3120,12 @@ function fastLoop(){
         else {
             delete global.city.morale['bonfire'];
         }
+        /* [anki-fork] Anki morale (features of the Anki link), total capped by global.anki.moraleMax */
+        {
+            let am = ankiMorale();
+            if (am.points){ global.city.morale['anki'] = am.points; morale += am.points; }
+            else { delete global.city.morale['anki']; }
+        }
 
         if (global.civic.govern.type === 'anarchy'){
             stress /= 2;
@@ -3267,6 +3273,7 @@ function fastLoop(){
             morale -= badPress * 5;
         }
 
+        moraleCap += ankiMorale().cap; /* [anki-fork] */
         global.city.morale.potential = +(morale).toFixed(1);
         if (morale < m_min){
             morale = m_min;

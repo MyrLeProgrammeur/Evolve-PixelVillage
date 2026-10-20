@@ -35,7 +35,7 @@
     excludeTypes: [3, 4, 5],          // revlog.type : 3 filtrée sans replanif, 4 manuelle, 5 replanifiée
     noble: { minIvl: 21, value: 1000, requiresSuccess: false, dailyCap: 0 },
     maturity: [21, 180, 365],         // seuils du registre de maturation (une fois par carte et par seuil)
-    day: { min: 10 },                 // jour compté si crédits >= min(day.min, dues du matin)
+    day: { min: 10 },                 // jour compté si crédits >= max(1, min(day.min, dues du matin))
     streak: { jokersPerWeek: 2 },
     heat: { max: 1000, up: 7, down: 14 },
     perks: [                          // bonus permanents débloqués par la meilleure série (jamais retirés)
@@ -207,7 +207,8 @@
         credits.push(c);
       }
       D.newPaid = newPaid; D.newCapped = newCapped;
-      const need = typeof D.dueMorning === 'number' ? Math.min(R.day.min, D.dueMorning) : R.day.min;
+      // Jour compté (définition commune C/D) : au moins une carte, et au moins min(day.min, dues du matin).
+      const need = Math.max(1, typeof D.dueMorning === 'number' ? Math.min(R.day.min, D.dueMorning) : R.day.min);
       D.counted = D.credits >= need;
       days.push(D);
       dayInfo[day] = D;
@@ -221,7 +222,7 @@
       const jokersByWeek = {};
       for (let d = firstDay; d <= today; d++) {
         const info = dayInfo[d];
-        const counted = info ? info.counted : (typeof dues[d] === 'number' && dues[d] === 0);
+        const counted = info ? info.counted : false;
         if (counted) {
           streak.current++;
           streak.heat += Math.ceil((H.max - streak.heat) / H.up);

@@ -156,6 +156,10 @@ test('série douce : jokers par semaine, jour en cours, meilleure série, chaleu
   const few = day(L0, 4);
   assert.equal(L.replay(few, null, { today: L0 }).days[0].counted, false);
   assert.equal(L.replay(few.concat([{ k: 'state', id: 's', t: startUtc(L0), day: L0, dueMorning: 3 }]), null, { today: L0 }).days[0].counted, true);
+  // aucune due le matin : il faut quand même au moins une carte (définition commune C/D)
+  const zero = [{ k: 'state', id: 'z', t: startUtc(L0 + 1), day: L0 + 1, dueMorning: 0 }];
+  assert.equal(L.replay(day(L0, 12).concat(zero), null, { today: L0 + 2 }).streak.jokersUsed, 1);
+  assert.equal(L.replay(day(L0, 12).concat(zero, day(L0 + 1, 1)), null, { today: L0 + 1 }).streak.current, 2);
 });
 
 test('versement monotone : rien n\'est repris, rien n\'est payé deux fois', () => {

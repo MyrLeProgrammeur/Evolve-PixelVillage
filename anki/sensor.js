@@ -89,12 +89,20 @@ function createSensor(opts) {
   function snapshotFrom(rows, nowMs) {
     const today = dayOf(nowMs), aToday = today - (crtDay() || today);
     const decks = {};
-    const tot = { new: 0, learn: 0, young: 0, mature: 0, suspended: 0, buried: 0, due: 0, total: 0 };
+    const zero = () => ({ new: 0, learn: 0, young: 0, mature: 0, suspended: 0, buried: 0, due: 0, total: 0, leech: 0, edited1: 0, edited7: 0, dueMorning: 0 });
+    const tot = zero();
+    const ed1 = dayStartMs(today, S.rollover) / 1000, ed7 = dayStartMs(today - 6, S.rollover) / 1000;
+    const deckOf = new Map();
     for (const c of rows) {
       const did = c.odid ? c.odid : c.did;
-      const k = decks[did] = decks[did] || { name: S.decks[did] || String(did), new: 0, learn: 0, young: 0, mature: 0, suspended: 0, buried: 0, due: 0, total: 0 };
+      deckOf.set(c.id, did);
+      const k = decks[did] = decks[did] || Object.assign({ name: S.decks[did] || String(did) }, zero());
       const add = (f) => { k[f]++; tot[f]++; };
       add('total');
+      // tag:leech et edited:1 / edited:7 (comptés en cartes, comme les recherches Anki)
+      if (typeof c.tags === 'string' && / leech /i.test(' ' + c.tags + ' ')) { add('leech'); }
+      if (c.nmod >= ed1) { add('edited1'); }
+      if (c.nmod >= ed7) { add('edited7'); }
       if (c.queue === -1) { add('suspended'); continue; }
       if (c.queue === -2 || c.queue === -3) { add('buried'); continue; }
       if (c.type === 0) { add('new'); continue; }
@@ -106,6 +114,13 @@ function createSensor(opts) {
     // (dues restantes + cartes en révision déjà répondues aujourd'hui).
     const doneToday = new Set();
     for (const e of byId.values()) { if (e.k === 'review' && e.day === today && (e.rt === 1 || e.rt === 2)) { doneToday.add(e.cid); } }
+    for (const k of Object.values(decks)) { k.dueMorning = k.due; }
+    tot.dueMorning = tot.due;
+    for (const cid of doneToday) {
+      const did = deckOf.get(cid);
+      if (did !== undefined && decks[did]) { decks[did].dueMorning++; }
+      tot.dueMorning++;
+    }
     return { v: 1, k: 'state', id: 'st:' + dev + ':' + today, t: nowMs, day: today, aday: aToday, src: 'revlog',
       dueMorning: tot.due + doneToday.size, approx: doneToday.size > 0, totals: tot, decks };
   }
@@ -154,7 +169,7 @@ function createSensor(opts) {
           nw: (r.type === 0 && r.lastIvl === 0) ? 1 : 0 };
         evs.push(e);
       }
-      const cards = db.prepare('select id, did, odid, type, queue, ivl, due, data from cards').all();
+      const cards = db.prepare('select c.id, c.did, c.odid, c.type, c.queue, c.ivl, c.due, c.data, n.tags, n.mod as nmod from cards c left join notes n on n.id = c.nid').all();
       const cdCount = cards.filter((c) => CD.customDataFromCardData(c.data)).length;
       return { evs, cards, cdCount, revlogRows: rows.length };
     } finally { db.close(); }
@@ -176,8 +191,8 @@ function createSensor(opts) {
   const PCOLS = ['_id', 'deck_id', 'original_deck_id', 'interval', 'lapses', 'last_review_time_secs', 'custom_data'];
   function parseRows(out, cols) {
     const res = [];
-    for (const line of out.split('\n')) {
-      if (!line.startsWith('Row: ')) { continue; }
+    for (const chunk of ('\n' + out).split('\nRow: ').slice(1)) {
+      const line = 'Row: ' + chunk.replace(/\n$/, '');
       const row = {}; let pos = line.indexOf(' ', 5) + 1;
       for (let i = 0; i < cols.length; i++) {
         const k = cols[i] + '='; const at = line.indexOf(k, pos);
@@ -219,6 +234,28 @@ function createSensor(opts) {
     return { added: addEvents(evs) };
   }
 
+  // --- texte des cartes (à la demande ; jamais journalisé, gardé en mémoire) ----------------------
+  const textCache = new Map();
+  function stripHtml(h) {
+    return String(h || '').replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, ' ').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+      .replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
+  }
+  async function cardText(cids) {
+    const want = Array.from(new Set((cids || []).map(Number).filter((x) => Number.isFinite(x) && x > 0))).slice(0, 50);
+    const missing = want.filter((c) => !textCache.has(c));
+    if (missing.length) {
+      const cols = ['_id', 'deck_id', 'question_simple'];
+      for (const r of await query('cid:' + missing.join(','), cols)) {
+        textCache.set(Number(r._id), { cid: Number(r._id), did: Number(r.deck_id), html: r.question_simple, text: stripHtml(r.question_simple) });
+      }
+      if (textCache.size > 2000) { textCache.delete(textCache.keys().next().value); }
+    }
+    const out = {};
+    for (const c of want) { if (textCache.has(c)) { out[c] = textCache.get(c); } }
+    return out;
+  }
+
   // --- API ---------------------------------------------------------------------------------------
   async function refresh(ro) {
     const r = ro || {};
@@ -255,7 +292,7 @@ function createSensor(opts) {
       refreshMs: S.ms, events: byId.size, rollover: S.rollover, crt: S.crt, today: dayOf(Date.now()),
       revlogRows: S.revlogRows, customDataCards: S.customDataCards, snapshot: S.snapshot };
   }
-  return { refresh, eventsSince, allEvents, status, close: () => shell.close(), dir, dev };
+  return { refresh, eventsSince, allEvents, status, cardText, close: () => shell.close(), dir, dev };
 }
 
 module.exports = { createSensor, ANKI_DIR, dayStartMs };
@@ -274,6 +311,10 @@ if (require.main === module) {
       console.log('source : ' + st.source + ' ; ' + r.added.length + ' événements nouveaux ; ' + st.events + ' dans le journal ; ' + (Date.now() - t0) + ' ms');
       if (st.revlogRows !== undefined) { console.log('lignes de revlog lues : ' + st.revlogRows + ' ; cartes portant un customData : ' + st.customDataCards); }
       if (st.snapshot) { console.log('aujourd\'hui (jour ' + st.today + ') : ' + JSON.stringify(st.snapshot.totals) + ' ; dues du matin ' + st.snapshot.dueMorning + (st.snapshot.approx ? ' (approchées)' : '')); }
+    }
+    if (cmd === 'text') {
+      const r = await sensor.cardText(args.slice(1).filter((a) => /^\d+$/.test(a)));
+      for (const c of Object.values(r)) { console.log(c.cid + ' : ' + c.text.slice(0, 160).replace(/\n/g, ' / ')); }
     }
     if (cmd === 'once' || cmd === 'replay') {
       const evs = sensor.allEvents();

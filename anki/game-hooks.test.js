@@ -53,14 +53,21 @@ test('src/anki.js : horloge à cartes, multiplicateur, cueillette, sauvegarde', 
   // ankiMult : 1 sans bonus ; somme additive plafonnée ; ligne de détail
   assert.equal(A.ankiMult('Food'), 1);
   ctx.ankiMult.set('flamme', 'Food', 0.15); ctx.ankiMult.set('chenes', '*', 0.1); ctx.ankiMult.set('fleuve', 'Food', 0.3);
-  assert.equal(A.ankiMult('Food'), 1.4);
-  assert.equal(ctx.__B.p.Food.Anki, '40%');
+  assert.equal(A.ankiMult('Food'), 1.4);                     // 15 + 10 + 30 = 55 % -> plafond 40 %, prorata
+  assert.equal(ctx.__B.p.Food['Anki : flamme'], '10.9%');
+  assert.equal(ctx.__B.p.Food['Anki : fleuve'], '21.8%');
   assert.equal(A.ankiMult('Stone'), 1.1);
   ctx.ankiMult.cap('Food', 0.2); assert.equal(A.ankiMult('Food'), 1.2);
-  // Cueillette manuelle : permise sauf si coupée en mode cartes
-  assert.equal(A.ankiAllowGather(), true);
-  ctx.ankiClock.set({ noManual: true }); assert.equal(A.ankiAllowGather(), false);
-  ctx.ankiClock.set({ mode: 'original' }); assert.equal(A.ankiAllowGather(), true);
+  // Cueillette manuelle : coupée par défaut en mode cartes, rétablie sur demande, toujours permise en mode original
+  assert.equal(A.ankiAllowGather(), false);
+  ctx.ankiClock.set({ noManual: false }); assert.equal(A.ankiAllowGather(), true);
+  ctx.ankiClock.set({ noManual: true, mode: 'original' }); assert.equal(A.ankiAllowGather(), true);
+  // Moral Anki : total plafonné à 12 (points et plafond de moral)
+  assert.deepEqual(JSON.parse(JSON.stringify(A.ankiMorale())), { points: 0, cap: 0 });
+  ctx.ankiMorale.set('monuments', 10, 10); ctx.ankiMorale.set('fete', 2, 0); ctx.ankiMorale.set('autre', 5, 5);
+  assert.deepEqual(JSON.parse(JSON.stringify(A.ankiMorale())), { points: 12, cap: 12 });
+  ctx.ankiMorale.set('autre', 0, 0);
+  assert.deepEqual(JSON.parse(JSON.stringify(A.ankiMorale())), { points: 12, cap: 10 });
   // Sauvegarde au temps réel en mode cartes (au plus toutes les 5 s)
   ctx.ankiClock.set({ mode: 'cards' });
   const realNow = Date.now; let fake = realNow() + 6000; ctx.Date = { now: () => fake };

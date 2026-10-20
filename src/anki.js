@@ -15,7 +15,8 @@ const CLOCK_DEFAULTS = {
     drain: 8,           // au plus `drain` ticks de la réserve joués par tick réel (vitesse de rattrapage x8)
     bank: 0,            // ticks gagnés et pas encore joués
     frac: 0,            // fraction de tick passif accumulée
-    noManual: false     // true : la cueillette manuelle est coupée en mode cartes
+    noManual: true      // la cueillette manuelle (clic RNA, nourriture, bois, pierre) est coupée en mode cartes ;
+                        // false la rétablit. Sans effet en mode original.
 };
 
 export function ankiState(){
@@ -32,6 +33,8 @@ export function ankiState(){
     if (!a.today){ a.today = { day: 0, credits: 0, cids: [] }; }
     if (!a.mult){ a.mult = {}; }                               // feature -> { ressource: bonus (0.1 = +10 %) }
     if (!a.multCap){ a.multCap = { '*': 0.4 }; }               // plafond de la somme, par ressource ('*' = défaut)
+    if (!a.morale){ a.morale = {}; }                           // feature -> { points, cap } (moral et plafond de moral)
+    if (typeof a.moraleMax !== 'number'){ a.moraleMax = 12; }   // total Anki, moral comme plafond (accord C/D)
     if (!a.clock || typeof a.clock !== 'object'){ a.clock = {}; }
     Object.keys(CLOCK_DEFAULTS).forEach(function(k){
         if (a.clock[k] === undefined){ a.clock[k] = CLOCK_DEFAULTS[k]; }
@@ -59,22 +62,43 @@ export function ankiClockGate(periods, max){
     return n;
 }
 
-/* Multiplicateur Anki d'une ressource : 1 + min(plafond, somme des bonus des features). */
+/* Multiplicateur Anki d'une ressource : enveloppe additive (accord C/D). Les bonus des features
+   s'additionnent ; si la somme dépasse le plafond de la ressource (+40 % par défaut), chaque bonus
+   est réduit au prorata. Une ligne de détail par feature dans l'infobulle. 1 exactement sans bonus. */
 export function ankiMult(res){
     const a = global.anki;
     if (!a || !a.mult){ return 1; }
+    const parts = [];
     let sum = 0;
     Object.keys(a.mult).forEach(function(f){
         const m = a.mult[f];
-        if (m && typeof m[res] === 'number'){ sum += m[res]; }
-        if (m && typeof m['*'] === 'number'){ sum += m['*']; }
+        let v = 0;
+        if (m && typeof m[res] === 'number'){ v += m[res]; }
+        if (m && typeof m['*'] === 'number'){ v += m['*']; }
+        if (v){ parts.push([f, v]); sum += v; }
     });
     if (sum === 0){ return 1; }
     const capTable = a.multCap || {};
     const cap = typeof capTable[res] === 'number' ? capTable[res] : (typeof capTable['*'] === 'number' ? capTable['*'] : 0.4);
-    sum = Math.max(-cap, Math.min(cap, sum));
-    if (breakdown.p[res]){ breakdown.p[res]['Anki'] = +(sum * 100).toFixed(1) + '%'; }
-    return 1 + sum;
+    const scale = Math.abs(sum) > cap ? cap / Math.abs(sum) : 1;
+    if (breakdown.p[res]){
+        parts.forEach(function(p){ breakdown.p[res]['Anki : ' + p[0]] = +(p[1] * scale * 100).toFixed(1) + '%'; });
+    }
+    return 1 + sum * scale;
+}
+
+/* Moral Anki : somme des points des features, plafonnée à moraleMax (12), et autant de plafond de moral. */
+export function ankiMorale(){
+    const a = global.anki;
+    if (!a || !a.morale){ return { points: 0, cap: 0 }; }
+    let points = 0, cap = 0;
+    Object.keys(a.morale).forEach(function(f){
+        const m = a.morale[f] || {};
+        points += Number(m.points) || 0;
+        cap += Number(m.cap) || 0;
+    });
+    const max = typeof a.moraleMax === 'number' ? a.moraleMax : 12;
+    return { points: Math.max(-max, Math.min(max, points)), cap: Math.max(0, Math.min(max, cap)) };
 }
 
 /* En mode cartes, la sauvegarde d'Evolve (faite dans longLoop) s'arrête avec l'horloge :
@@ -121,5 +145,11 @@ if (typeof window !== 'undefined'){
         else { a.mult[feature][res] = Number(bonus); }
     };
     window.ankiMult.cap = function(res, cap){ ankiState().multCap[res || '*'] = Number(cap); };
+    window.ankiMorale = function(){ return ankiMorale(); };
+    window.ankiMorale.set = function(feature, points, cap){
+        const a = ankiState();
+        if (!points && !cap){ delete a.morale[feature]; }
+        else { a.morale[feature] = { points: Number(points) || 0, cap: Number(cap) || 0 }; }
+    };
     window.ankiState = ankiState;
 }
