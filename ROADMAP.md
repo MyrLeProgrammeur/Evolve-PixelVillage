@@ -56,6 +56,8 @@ The audits list what is still missing for humans in Era 1 ([project-docs/audit/S
 
 ## 4. Interface and gameplay
 
+- 🟡 Anki desktop add-on: the village advances with your reviews (card clock, dawn and dusk, completed-day bonus). Written and unit-tested; first run in Anki pending. Next: dawn sky, "the village waits for your cards" screen, then the review-driven features (chronicle, hearth, weekly letter, oaks, monuments…).
+
 - 🟡 Pixel skin of the original interface (buttons, frames, resources, log, tabs, fonts) — more screens to restyle (settings, market, modals, governments).
 - ⬜ A touch-first interface centred on the village (build panels, jobs, research list) on top of an exposed action API; the analysis is in [project-docs/audit/F-gameplay-sur-vue-pixel.md](project-docs/audit/F-gameplay-sur-vue-pixel.md).
 - ⬜ Desktop layout, other browsers, accessibility checks (contrast, text size, reduced motion).

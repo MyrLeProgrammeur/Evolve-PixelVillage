@@ -47,6 +47,22 @@ The view reads `window.evolve.global`, a read-only copy of the game state that E
 
 `SpriteKit.render(state, dt)` draws Era 0 while `race.species === 'protoplasm'` and the village afterwards; `anki-village.js` is the host page script (panel, scaling, error display) and `anki-skin.js` builds the skin images from the kit.
 
+## Anki link (work in progress)
+
+The goal is a game fed by your Anki reviews, shipped as an **Anki desktop add-on**: the village only moves when you study.
+
+- `addon/` opens the game in an Anki window (**Tools → Evolve Village**) and reads your reviews from the collection, **read-only**. Reviews made on a phone arrive with the AnkiWeb sync. The save game is kept in your Anki profile folder (`anki-village/`).
+- `anki/ledger.js` turns reviews into game credits, and the same journal always gives the same result. The rules:
+  - one reward per card and per day, never depending on the button you press;
+  - the first 10 cards of the day are worth more (the "dawn"), and value falls off after 60 cards;
+  - noble materials (copper, iron, cement) come from mature cards only (interval of at least 21 days before the answer);
+  - a bonus for days when every card due that morning was done;
+  - nothing is ever taken back.
+- `src/anki.js` is the card clock: in card mode the game's simulation ticks come from reviews, with no idle production.
+- Build the add-on with `python3 tools/addon/build_addon.py`, which writes `dist/evolve_village.ankiaddon`. Then use **Tools → Add-ons → Install from file** in Anki.
+
+Status: written and unit-tested, not yet run inside Anki. Design notes and decisions are in French in the companion project, not in this repository.
+
 ## Changes to upstream files (MPL-2.0 notice)
 
 | File | Change |
