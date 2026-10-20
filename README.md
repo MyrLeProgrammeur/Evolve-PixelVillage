@@ -51,14 +51,16 @@ The view reads `window.evolve.global`, a read-only copy of the game state that E
 
 | File | Change |
 |---|---|
-| `index.html` | Local libraries instead of unpkg, no Google Fonts / Tag Manager, loads `pixel.css`, `anki-village.js`, `anki-skin.js`. |
+| `index.html` | Local libraries instead of unpkg, no Google Fonts / Tag Manager, loads `pixel.css`, `anki-village.js`, `anki-skin.js`, `anki-bridge.js`. |
 | `src/vars.js` | `settings.expose` always on. |
-| `src/main.js` | Version check against github.io removed; `window.ankiCredit(resource, amount)` hook added (credits a resource through the game's own `modRes`). |
-| `src/actions.js` | The humanoid genus always gives `human`. |
+| `src/main.js` | Version check against github.io removed; `window.ankiCredit(resource, amount)` hook added (credits a resource through the game's own `modRes`); card clock gate in `execGameLoops` (number of simulation ticks, unchanged in the default mode) and a real-time save while that clock is stopped; Anki morale key and morale cap. |
+| `src/prod.js` | `production('psychic_boost', res)` also multiplies by `ankiMult(res)` (exactly 1 when no Anki bonus is set). |
+| `strings/strings.json` | `morale_anki` label. |
+| `src/actions.js` | The humanoid genus always gives `human`; manual gathering (RNA, food, lumber, stone, chrysotile) can be switched off in card-clock mode. |
 | `src/functions.js` | Touch screens: info bubbles open on a long press and close when the finger lifts. |
 | `evolve/main.js` | Rebuilt from `src/` with esbuild. |
 
-New files: `kit/`, `evolve/pixel.css`, `evolve/kitpixel.ttf`, `anki-village.js`, `anki-skin.js`, `atelier.html`, `serve.js`, `jouer.sh`, `tools/`, `kit-patches/`, `project-docs/`. See [NOTICE](NOTICE).
+New files: `src/anki.js`, `anki/` (Anki link: sensor, ledger, customData snippet, tests), `anki-bridge.js`, `tools/budget/`, `kit/`, `evolve/pixel.css`, `evolve/kitpixel.ttf`, `anki-village.js`, `anki-skin.js`, `atelier.html`, `serve.js`, `jouer.sh`, `tools/`, `kit-patches/`, `project-docs/`. See [NOTICE](NOTICE).
 
 ## Roadmap in one paragraph
 

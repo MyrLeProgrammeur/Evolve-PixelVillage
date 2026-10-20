@@ -13,6 +13,6 @@ try {
     });
   }
   if (/Android/.test(navigator.userAgent)) {
-    fetch("http://127.0.0.1:8765/anki/ping", { mode: "no-cors" }).catch(function () {});
+    fetch("http://127.0.0.1:8765/api/anki/ping", { mode: "no-cors" }).catch(function () {});
   }
 } catch (e) { /* ne jamais gêner la révision */ }

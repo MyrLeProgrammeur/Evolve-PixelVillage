@@ -40,7 +40,7 @@ test('une valeur par bouton, jour et intervalle avant ; limites d\'Anki respect�
     assert.ok(Object.keys(cd).every((k) => Buffer.byteLength(k) <= 8));
     assert.deepEqual(CD.factsFor(CD.parseCustomData(packed[b]), today()), { b: i + 1, p: 30 });
   });
-  assert.deepEqual(pings, ['http://127.0.0.1:8765/anki/ping']);
+  assert.deepEqual(pings, ['http://127.0.0.1:8765/api/anki/ping']);
 });
 
 test('deuxième passage le même jour : le premier bouton du jour est conservé', async () => {
