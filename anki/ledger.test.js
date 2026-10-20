@@ -39,7 +39,7 @@ test('une seule récompense par (carte, jour), quel que soit le nombre de répon
 test('la base ne dépend pas du bouton', () => {
   const mk = (b) => [1, 2, 3, 4, 5].map((cid) => rv(cid, D0, { b: b, t: startUtc(D0) + cid * 1000 }));
   const vals = [1, 2, 3, 4].map((b) => L.replay(mk(b)).totals.base);
-  assert.deepEqual(vals, [5000, 5000, 5000, 5000]);
+  assert.deepEqual(vals, [42500, 42500, 42500, 42500]);            // 5 crédits + aube 5 × 7,5
 });
 
 test('déterminisme : même résultat quel que soit l\'ordre d\'arrivée', () => {
@@ -82,8 +82,8 @@ test('rendement décroissant : formes flat, sqrt, cap, plafond dur', () => {
   const ev = [];
   for (let c = 0; c < 80; c++) { ev.push(rv(c, D0, { t: startUtc(D0) + c * 1000 })); ev.push(rv(c, D0 + 1, { t: startUtc(D0 + 1) + c * 1000 })); }
   const r = L.replay(ev, sq);
-  assert.equal(r.days[0].base, L.cumulative(80, sq));
-  assert.equal(r.days[1].base, L.cumulative(80, sq));
+  assert.equal(r.days[0].base, L.dayValue(80, sq));
+  assert.equal(r.days[1].base, L.dayValue(80, sq));
 });
 
 test('nouvelles cartes plafonnées par jour, sans compter dans le rang', () => {
@@ -93,7 +93,7 @@ test('nouvelles cartes plafonnées par jour, sans compter dans le rang', () => {
   const r = L.replay(ev, { diminishing: { shape: 'flat' } });
   const d = r.days[0];
   assert.equal(d.newPaid, 20); assert.equal(d.newCapped, 5); assert.equal(d.credits, 26);
-  assert.equal(d.base, 21000);
+  assert.equal(d.base, 21000 + 10 * 7500);                         // + aube sur les 10 premiers payés
   assert.equal(r.credits.find(c => c.cid === 100).rank, 21);
 });
 
@@ -166,7 +166,7 @@ test('versement monotone : rien n\'est repris, rien n\'est payé deux fois', () 
   const ev = [rv(1, D0), rv(2, D0), rv(3, D0, { p: 30 })];
   const r = L.replay(ev);
   let s = L.settle(r, { base: 0, noble: 0 });
-  assert.deepEqual(s.delta, { base: 3000, noble: 1000 });
+  assert.deepEqual(s.delta, { base: 3000 + 3 * 7500, noble: 1000 });
   s = L.settle(r, s.granted);
   assert.deepEqual(s.delta, { base: 0, noble: 0 });
   const shorter = L.replay(ev.slice(0, 1));                  // journal perdu en partie
@@ -174,7 +174,7 @@ test('versement monotone : rien n\'est repris, rien n\'est payé deux fois', () 
   assert.deepEqual(s2.delta, { base: 0, noble: 0 });
   assert.deepEqual(s2.granted, s.granted);
   const r2 = L.replay(ev.concat([rv(4, D0)]));
-  assert.deepEqual(L.settle(r2, s.granted).delta, { base: 1000, noble: 0 });
+  assert.deepEqual(L.settle(r2, s.granted).delta, { base: 1000 + 7500, noble: 0 });
   assert.equal(L.newCredits(r, r2).length, 1);
 });
 
@@ -184,4 +184,40 @@ test('montants entiers partout', () => {
   const r = L.replay(ev);
   for (const c of r.credits) { assert.ok(Number.isInteger(c.base) && Number.isInteger(c.noble)); }
   assert.ok(Number.isInteger(r.totals.base));
+});
+
+test('v2 : aube de 75 sur les 10 premiers crédits payés, jamais de noble', () => {
+  const day = (n, extra) => Array.from({ length: n }, (_, c) => rv(c, D0, Object.assign({ t: startUtc(D0) + c * 1000 }, extra)));
+  assert.equal(L.replay(day(10)).totals.base, 85000);                // 10 cartes = 85 crédits
+  assert.equal(L.replay(day(5)).totals.base, 5000 + 5 * 7500);
+  assert.equal(L.replay(day(60)).totals.base, 135000);               // 60 cartes = 135 crédits
+  assert.equal(L.dayValue(60), 135000);
+  assert.ok(L.dayValue(150) - L.dayValue(149) < 400);               // crépuscule raide (soft 10)
+  const mature = L.replay(day(10, { p: 30 }));
+  assert.equal(mature.days[0].dawn, 75000);
+  assert.equal(mature.totals.noble, 10000);                          // noble par carte, aube exclue
+  // l'ordre d'arrivée ne change rien
+  assert.equal(JSON.stringify(L.replay(shuffle(day(30), 5))), JSON.stringify(L.replay(day(30))));
+});
+
+test('v2 : nobles décroissants, cartes mûres en tête', () => {
+  const ev = [];
+  for (let c = 0; c < 40; c++) { ev.push(rv(c, D0, { t: startUtc(D0) + c * 1000 })); }            // 40 jeunes d'abord
+  for (let c = 40; c < 120; c++) { ev.push(rv(c, D0, { p: 30, t: startUtc(D0) + c * 1000 })); }  // 80 mûres ensuite
+  const r = L.replay(ev);
+  assert.equal(r.totals.noble, L.cumulative(80));                    // rang noble = rang parmi les mûres seules
+  const flat = L.replay(ev, { noble: { shape: 'flat' } });
+  assert.equal(flat.totals.noble, 80000);
+});
+
+test('v2 : journée accomplie, payée une fois, après le début de la partie seulement', () => {
+  const done = (d, id) => ({ v: 1, k: 'done', id: id || 'dn:x:' + d, t: startUtc(d) + 5 * H, day: d, dueMorning: 8 });
+  const ev = [rv(1, D0), rv(2, D0), done(D0), done(D0, 'dn:y:' + D0)];
+  const r = L.replay(ev);
+  assert.equal(r.days[0].done, 15000);
+  assert.equal(r.totals.base, 2000 + 2 * 7500 + 15000);
+  const later = L.replay(ev, null, { epoch: startUtc(D0 + 1) });
+  assert.equal(later.totals.base, 0);
+  // jour accompli sans aucune révision créditée (tout fait ailleurs, exclu) : le bonus reste un jour à part
+  assert.equal(L.replay([done(D0 + 3)]).totals.base, 15000);
 });

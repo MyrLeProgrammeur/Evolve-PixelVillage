@@ -55,7 +55,8 @@ export function ankiClockGate(periods, max){
     if (c.frac > limit){ c.frac = limit; }                  // pas d'accumulation sans fin si l'onglet dort
     if (c.bank > 0 && n < limit){
         // La réserve n'est jamais perdue : on ne prélève que ce qui sera joué.
-        let d = Math.min(c.bank, Math.max(1, c.drain | 0) * periods, limit - n);
+        // Rattrapage adaptatif (GD §2.5) : la réserve se vide en ~12 appels (3 s), dans la limite d'Evolve.
+        let d = Math.min(c.bank, Math.max(Math.max(1, c.drain | 0) * periods, Math.ceil(c.bank / 12)), limit - n);
         c.bank -= d;
         n += d;
     }
@@ -111,6 +112,21 @@ export function ankiMaybeSave(){
     if (now - lastSave < 5000 || global.race.hasOwnProperty('geck') || typeof LZString === 'undefined'){ return; }
     lastSave = now;
     save.setItem('evolved', LZString.compressToUTF16(JSON.stringify(global)));
+}
+
+/* Clic de cueillette en mode cartes (GD §2.3) : il ne produit rien, mais répond. Une ligne de journal au plus
+   par minute, avec les dues du jour lues dans Anki, et un signal au panneau Anki (bouton Réviser mis en avant). */
+let lastHint = 0;
+export function ankiGatherHint(messageQueue, loc){
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof Event === 'function'){
+        window.dispatchEvent(new Event('anki-gather'));
+    }
+    const now = Date.now();
+    if (now - lastHint < 60000){ return; }
+    lastHint = now;
+    const st = typeof window !== 'undefined' && window.AnkiVillage ? window.AnkiVillage.status() : null;
+    const due = st && typeof st.due === 'number' ? st.due : null;
+    messageQueue(due === null ? loc('anki_gather_hint') : (due > 0 ? loc('anki_gather_hint_due', [due]) : loc('anki_gather_hint_none')), 'info', false, ['progress']);
 }
 
 /* La cueillette manuelle (clic) est-elle permise ? Elle est la seule production hors des boucles. */

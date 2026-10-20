@@ -7,14 +7,15 @@
 (function () {
   'use strict';
   var POLL_MS = 5000;
-  /* Taux par crédit plein (1000 millièmes), calculés par tools/budget/era-budget.js : 40 cartes/jour, ère 1 en
-     10 semaines, la moitié du budget par le crédit direct (le reste par la production des ticks), nobles = 20 %
-     des crédits. Ère 0 : en une semaine à 40 cartes/jour. Hypothèses à recalibrer (rapports/plan/B-rapport.md, B6). */
+  /* Taux par crédit plein (1000 millièmes), calculés par tools/budget/era-budget.js avec les règles v2 (aube 75,
+     pleine valeur jusqu'à 60) : ère 1 en 8 semaines à 60 cartes/jour (7 560 crédits), la moitié du budget par le
+     crédit direct, le reste par la production des ticks ; nobles = accélérateur (supposés 20 % des crédits).
+     Ère 0 : 4 jours d'étude à 60 cartes/jour (540 crédits). Hypothèses à recalibrer au rejeu réel (B-R5). */
   var RATES = {
-    evo: { base: { RNA: 4, DNA: 8 }, noble: { RNA: 4, DNA: 8 } },
+    evo: { base: { RNA: 2, DNA: 4 }, noble: { RNA: 2, DNA: 4 } },
     era1: {
-      base: { Knowledge: 29, Money: 95, Lumber: 14, Stone: 11, Food: 5, Furs: 0.6, Plywood: 0.9, Brick: 0.8 },
-      noble: { Iron: 37, Cement: 18, Steel: 12, Copper: 6.7, Wrought_Iron: 2.8, Coal: 1.8 }
+      base: { Knowledge: 11, Money: 35, Lumber: 5.3, Stone: 3.9, Food: 1.9, Furs: 0.2, Plywood: 0.4, Brick: 0.3 },
+      noble: { Iron: 14, Cement: 6.8, Steel: 4.6, Copper: 2.5, Wrought_Iron: 1, Coal: 0.7 }
     }
   };
   var S = { events: new Map(), cursor: 0, enabled: null, ledger: null, status: null, lastOk: 0, listeners: {}, day: null, error: null };
@@ -61,6 +62,11 @@
     var a = window.ankiState();
     var d0 = today();
     if (!a.epoch) { a.epoch = dayStart(d0); }                  // 1re connexion : les révisions d'aujourd'hui comptent
+    if (window.AnkiVillageHost && !a.clockSet) {
+      // Add-on : le temps ne vient que des révisions (GD §2), posé une fois à la première connexion.
+      window.ankiClock.set({ mode: 'cards', passive: 0, noManual: true });
+      a.clockSet = 1;
+    }
     var prev = S.ledger;
     var L = window.AnkiLedger.replay(Array.from(S.events.values()), a.rules || null, { epoch: a.epoch, today: d0 });
     S.ledger = L;
@@ -122,7 +128,8 @@
       'background:rgba(255,250,235,.82);color:#2a1f2b;border:1px solid #6e4329;cursor:pointer;opacity:.85}' +
       '#av-anki.off{opacity:.45}#av-anki-pop{position:absolute;left:6px;top:30px;z-index:4;font:12px/1.5 system-ui,sans-serif;padding:8px 10px;' +
       'border-radius:8px;background:#fffaeb;color:#2a1f2b;border:1px solid #6e4329;max-width:260px;box-shadow:0 2px 6px rgba(0,0,0,.35)}' +
-      '#av-anki-pop select{font:12px system-ui,sans-serif;margin-left:4px}';
+      '#av-anki-pop button{font:600 12px system-ui,sans-serif;margin-top:6px;padding:3px 10px;border-radius:5px;border:1px solid #6e4329;' +
+      'background:#f6c945;color:#2a1f2b;cursor:pointer}#av-anki.nudge{outline:3px solid #f6c945;opacity:1}';
     document.head.appendChild(st);
     badge = document.createElement('div'); badge.id = 'av-anki';
     badge.onclick = function () { if (pop) { pop.remove(); pop = null; } else { openPop(panel); } };
@@ -135,30 +142,25 @@
     var html = '<b>Cartes Anki</b><br>';
     if (S.enabled !== true) { html += window.AnkiVillageHost ? 'Non relié : la collection Anki n\'a pas répondu.' : 'Non relié. Lancer <code>node serve.js --anki</code>.'; }
     else {
+      var st = status(), td = S.ledger && S.ledger.days.filter(function (x) { return x.day === today(); })[0];
       html += 'Aujourd\'hui : ' + (a ? a.today.credits : 0) + ' cartes créditées' + (a && a.today.counted ? ' (jour compté)' : '') + '<br>';
+      if (typeof st.due === 'number') { html += st.due > 0 ? 'Encore ' + st.due + ' cartes dues aujourd\'hui.<br>' : 'Plus aucune carte due aujourd\'hui.<br>'; }
+      if (td && td.done) { html += '<b>Journée accomplie.</b><br>'; }
       if (S.error) { html += 'Capteur : ' + S.error + '<br>'; }
     }
-    if (c) {
-      html += '<label>Temps du jeu<select id="av-anki-mode"><option value="original">normal</option><option value="cards">cartes</option></select></label><br>' +
-        '<label>Production sans cartes<select id="av-anki-passive"><option value="0">0 %</option><option value="0.1">10 %</option><option value="0.25">25 %</option>' +
-        '<option value="0.5">50 %</option><option value="1">100 %</option></select></label><br>' +
-        '<label>Cueillette au clic<select id="av-anki-manual"><option value="0">permise</option><option value="1">coupée</option></select></label>';
-    }
+    // Aucun réglage d'horloge pour le joueur (GD §3.7) : le temps du village vient des révisions.
+    if (c && c.mode !== 'cards') { html += '<i>Temps du jeu : normal (jeu web).</i><br>'; }
+    if (window.AnkiVillageHost) { html += '<button id="av-anki-review">Réviser</button>'; }
     pop.innerHTML = html;
     panel.appendChild(pop);
-    if (c) {
-      var m = pop.querySelector('#av-anki-mode'), p = pop.querySelector('#av-anki-passive'), k = pop.querySelector('#av-anki-manual');
-      m.value = c.mode; p.value = String(c.passive); k.value = c.noManual ? '1' : '0';
-      m.onchange = function () { window.ankiClock.set({ mode: m.value }); };
-      p.onchange = function () { window.ankiClock.set({ passive: Number(p.value) }); };
-      k.onchange = function () { window.ankiClock.set({ noManual: k.value === '1' }); };
-    }
+    var rb = pop.querySelector('#av-anki-review');
+    if (rb) { rb.onclick = function () { window.AnkiVillageHost.request('review'); }; }
   }
   function paint() {
     var b = ensureBadge(); if (!b) { return; }
     var a = game() ? window.ankiState() : null;
-    if (S.enabled !== true) { b.className = 'off'; b.textContent = 'Anki : non relié'; return; }
-    b.className = '';
+    if (S.enabled !== true) { b.classList.add('off'); b.textContent = 'Anki : non relié'; return; }
+    b.classList.remove('off');
     var n = a && a.today && a.today.day === today() ? a.today.credits : 0;
     b.textContent = 'Anki : ' + n + (n > 1 ? ' cartes' : ' carte') + ' aujourd\'hui';
   }
@@ -167,7 +169,8 @@
     var a = game() ? window.ankiState() : null;
     return { connected: S.enabled === true, source: S.status && S.status.source, error: S.error, lastSync: S.lastOk,
       today: a ? a.today : null, totals: S.ledger ? S.ledger.totals : null, reserve: a ? a.reserve : null,
-      streak: a ? a.streak : null, perks: a ? a.perks.slice() : [], clock: window.ankiClock ? window.ankiClock.get() : null };
+      streak: a ? a.streak : null, perks: a ? a.perks.slice() : [], clock: window.ankiClock ? window.ankiClock.get() : null,
+      due: S.status && S.status.snapshot && S.status.snapshot.totals ? S.status.snapshot.totals.due : null };
   }
   window.AnkiVillage = {
     status: status,
@@ -188,6 +191,11 @@
     setInterval(function () { if (document.visibilityState !== 'hidden') { poll(); } else { paint(); } }, POLL_MS);
     setInterval(function () { var g = game(); if (g) { deliver(window.ankiState()); } paint(); }, 1000);
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { poll(); } });
+    // Clic de cueillette en mode cartes : le badge se signale (le bouton Réviser est dans son menu).
+    if (window.addEventListener) window.addEventListener('anki-gather', function () {
+      var b = ensureBadge(); if (!b) { return; }
+      b.classList.add('nudge'); setTimeout(function () { b.classList.remove('nudge'); }, 2500);
+    });
   }
   function load() {
     if (window.AnkiLedger) { start(); return; }

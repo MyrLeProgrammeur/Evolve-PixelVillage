@@ -1,6 +1,6 @@
 import { global, save, seededRandom, webWorker, keyMultiplier, keyMap, srSpeak, sizeApproximation, p_on, support_on, int_on, gal_on, spire_on, tmp_vars, setupStats, callback_queue } from './vars.js';
 import { loc } from './locale.js';
-import { ankiAllowGather } from './anki.js';
+import { ankiAllowGather, ankiGatherHint } from './anki.js';
 import { timeCheck, timeFormat, vBind, popover, clearPopper, flib, tagEvent, clearElement, costMultiplier, darkEffect, genCivName, powerModifier, powerCostMod, calcPrestige, adjustCosts, modRes, messageQueue, buildQueue, format_emblem, shrineBonusActive, calc_mastery, calcPillar, calcGenomeScore, getShrineBonus, eventActive, easterEgg, getHalloween, trickOrTreat, deepClone, hoovedRename, get_qlevel } from './functions.js';
 import { unlockAchieve, challengeIcon, alevel, universeAffix, checkAdept } from './achieve.js';
 import { races, traits, genus_def, neg_roll_traits, randomMinorTrait, cleanAddTrait, combineTraits, biomes, planetTraits, setJType, altRace, setTraitRank, setImitation, shapeShift, basicRace, fathomCheck, traitCostMod, renderSupernatural, blubberFill, traitRank } from './races.js';
@@ -30,7 +30,8 @@ export const actions = {
             },
             condition(){ return global.resource.hasOwnProperty('RNA') && global.resource.RNA.display && !global.race['evoFinalMenu']; },
             action(args){
-                if(global['resource']['RNA'].amount < global['resource']['RNA'].max && ankiAllowGather()){
+                if (!ankiAllowGather()){ ankiGatherHint(messageQueue, loc); } /* [anki-fork] */
+                else if(global['resource']['RNA'].amount < global['resource']['RNA'].max){
                     modRes('RNA',global.race['rapid_mutation'] ? 2 : 1,true);
                 }
                 return false;
@@ -1127,7 +1128,8 @@ export const actions = {
                 Mana(){ return global.tech['conjuring'] ? 1 : 0; },
             },
             action(args){
-                if (!global.settings.pause && ankiAllowGather()){ /* [anki-fork] */
+                if (!global.settings.pause && !ankiAllowGather()){ ankiGatherHint(messageQueue, loc); } /* [anki-fork] */
+                else if (!global.settings.pause){
                     if(global['resource']['Food'].amount < global['resource']['Food'].max && !global.race['fasting']){
                         modRes('Food',$(this)[0].val(true),true);
                     }
@@ -1180,7 +1182,8 @@ export const actions = {
                 Mana(){ return global.tech['conjuring'] && global.tech['conjuring'] >= 2 ? 1 : 0; },
             },
             action(args){
-                if (!global.settings.pause && ankiAllowGather()){ /* [anki-fork] */
+                if (!global.settings.pause && !ankiAllowGather()){ ankiGatherHint(messageQueue, loc); } /* [anki-fork] */
+                else if (!global.settings.pause){
                     if (global['resource']['Lumber'].amount < global['resource']['Lumber'].max){
                         modRes('Lumber',$(this)[0].val(true),true);
                     }
@@ -1231,7 +1234,8 @@ export const actions = {
                 Mana(){ return global.tech['conjuring'] && global.tech['conjuring'] >= 2 ? 1 : 0; },
             },
             action(args){
-                if (!global.settings.pause && ankiAllowGather()){ /* [anki-fork] */
+                if (!global.settings.pause && !ankiAllowGather()){ ankiGatherHint(messageQueue, loc); } /* [anki-fork] */
+                else if (!global.settings.pause){
                     if (global['resource']['Stone'].amount < global['resource']['Stone'].max){
                         modRes('Stone',$(this)[0].val(true),true);
                     }
@@ -1283,7 +1287,8 @@ export const actions = {
                 Mana(){ return global.tech['conjuring'] && global.tech['conjuring'] >= 2 ? 1 : 0; },
             },
             action(args){
-                if (!global.settings.pause && ankiAllowGather()){ /* [anki-fork] */
+                if (!global.settings.pause && !ankiAllowGather()){ ankiGatherHint(messageQueue, loc); } /* [anki-fork] */
+                else if (!global.settings.pause){
                     if (global['resource']['Chrysotile'].amount < global['resource']['Chrysotile'].max){
                         modRes('Chrysotile',$(this)[0].val(true),true);
                     }

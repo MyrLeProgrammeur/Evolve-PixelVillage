@@ -56,6 +56,10 @@ function reviews(n, from, dayOffset) {
 test('pont : versement monotone, réserve, ticks, changement d\'ère, rien payé deux fois', { skip: !esbuild && 'esbuild absent' }, async () => {
   const { ctx, G, server } = await setup();
   const V = ctx.AnkiVillage;
+  // Ce test vérifie la mécanique du pont : règles sans aube et taux d'origine, fixés ici.
+  ctx.ankiState().rules = { dawn: { cards: 0 } };
+  Object.assign(V.rates.evo.base, { RNA: 4, DNA: 8 }); Object.assign(V.rates.evo.noble, { RNA: 4, DNA: 8 });
+  V.rates.era1.base.Money = 95;
   server.events = reviews(10, 0).concat(reviews(5, 100, -1));          // 5 révisions d'hier : avant la partie, non payées
   await V.refresh();
   const a = ctx.ankiState();

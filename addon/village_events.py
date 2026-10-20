@@ -146,16 +146,28 @@ def snapshot(query, now_ms, dev, rollover, crt, decks, reviews):
     }
 
 
+def day_done(first, current, reviewed_today):
+    """Journée accomplie (bonus du grand livre, règle `done`) : toutes les dues du matin sont faites.
+    - il y avait des dues ce matin (première photo du jour) et au moins une carte a été révisée ;
+    - plus aucune carte n'est due maintenant (toutes les dues, sans tenir compte des limites des paquets) ;
+    - aucune carte suspendue depuis ce matin : suspendre pour vider sa file ne donne pas le bonus."""
+    if not first or not current or first["day"] != current["day"]:
+        return False
+    return (first["dueMorning"] >= 1 and reviewed_today >= 1 and current["totals"]["due"] == 0
+            and current["totals"]["suspended"] <= first["totals"]["suspended"])
+
+
 class Sensor:
-    """État du capteur pour une collection ouverte. `query` lit la collection ; `store` garde les
-    photos du jour (dict jour -> photo, persisté par l'appelant)."""
+    """État du capteur pour une collection ouverte. `query` lit la collection ; `snapshots` garde la
+    première photo de chaque jour et `done` les journées accomplies (persistés par l'appelant)."""
 
     SNAPSHOT_EVERY_MS = 60000
 
-    def __init__(self, query, dev, snapshots=None):
+    def __init__(self, query, dev, snapshots=None, done=None):
         self.query = query
         self.dev = dev
         self.snapshots = snapshots if snapshots is not None else {}
+        self.done = done if done is not None else {}
         self.events = []          # révisions puis photos, dans l'ordre d'arrivée (le curseur est un index)
         self.last_rid = 0
         self.from_ms = None       # début de la partie (epoch du jeu) : l'historique antérieur n'est pas lu
@@ -170,6 +182,8 @@ class Sensor:
         self.ms = 0
         for day in sorted(self.snapshots, key=int):
             self.events.append(self.snapshots[day])
+        for day in sorted(self.done, key=int):
+            self.events.append(self.done[day])
 
     def ensure_from(self, from_ms):
         """Ne lit le revlog qu'à partir de `from_ms` (le jour où la partie a commencé) : une collection
@@ -188,13 +202,17 @@ class Sensor:
         try:
             self.rollover = read_rollover(self.query)
             self.crt = read_crt(self.query)
+            if self.from_ms is None:
+                # tant que la page n'a pas donné le début de la partie : la journée en cours seulement
+                self.ensure_from(day_start_ms(local_anki_day(now_ms, self.rollover), self.rollover))
             new = review_events(self.query, self.last_rid, self.rollover, self.crt)
             if new:
                 self.last_rid = int(new[-1]["t"])
                 self.events.extend(new)
             today = local_anki_day(now_ms, self.rollover)
             stale = self.current is None or self.current["day"] != today
-            if force or new or stale or now_ms - self.last_snapshot_ms > self.SNAPSHOT_EVERY_MS:
+            # La photo relit toutes les cartes : au plus une par minute pendant les révisions.
+            if force or stale or now_ms - self.last_snapshot_ms > self.SNAPSHOT_EVERY_MS:
                 self.decks = read_decks(self.query)
                 reviews = [e for e in self.events if e["k"] == "review" and e["day"] == today]
                 self.current = snapshot(self.query, now_ms, self.dev, self.rollover, self.crt, self.decks, reviews)
@@ -203,6 +221,11 @@ class Sensor:
                     # une seule photo journalisée par jour : la première (la plus proche du matin)
                     self.snapshots[str(today)] = self.current
                     self.events.append(self.current)
+                if str(today) not in self.done and day_done(self.snapshots.get(str(today)), self.current, len(reviews)):
+                    ev = {"v": 1, "k": "done", "id": "dn:%s:%d" % (self.dev, today), "t": now_ms, "day": today,
+                          "src": "revlog", "dueMorning": self.snapshots[str(today)]["dueMorning"]}
+                    self.done[str(today)] = ev
+                    self.events.append(ev)
             self.error = None
             return new
         except Exception as e:  # le jeu doit continuer, l'erreur est montrée dans le badge

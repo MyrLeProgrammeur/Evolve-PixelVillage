@@ -102,11 +102,17 @@ async function main() {
   });
 
   // ---------------------------------------------------------------- Crédits et taux
-  const perDay = (K) => L.cumulative(Math.min(K, 9999)) / 1000;            // crédits pleins par jour (base)
-  const plans = [];
-  for (const K of [40, 80, 150]) { for (const W of [6, 10]) { plans.push({ K, W, credits: round(7 * W * perDay(K)) }); } }
-  return { era0, stepCost, bought, techCost, scenarios, plans, perDay: { 40: perDay(40), 80: perDay(80), 150: perDay(150) } };
+  // Règles v2 : crédits pleins par jour, aube comprise (L.dayValue), sans le bonus de journée accomplie.
+  const PROFILES = [10, 30, 60, 150, 400];
+  const perDay = (K) => L.dayValue(Math.min(K, 9999)) / 1000;
+  const perDayAll = {}; for (const K of PROFILES) { perDayAll[K] = perDay(K); }
+  // Référence (GD §3.8) : ère 1 en 8 semaines à 60 cartes/jour ; ère 0 en 4 jours d'étude à 60 cartes/jour.
+  const plans = [{ K: REF.cards, W: REF.weeks, credits: round(7 * REF.weeks * perDay(REF.cards)) }];
+  const era0Credits = round(REF.era0Days * perDay(REF.cards));
+  return { era0, stepCost, bought, techCost, scenarios, plans, perDay: perDayAll, era0Credits };
 }
+
+const REF = { cards: 60, weeks: 8, era0Days: 4 };
 
 function table(res) {
   const out = [];
@@ -127,9 +133,12 @@ function table(res) {
     out.push('  - dont hôpitaux : ' + fmt(s.per.hospital || {}) + ' ; **sans hôpitaux : ' + fmt(noHosp) + '**');
   }
   out.push('');
-  out.push('## Crédits disponibles (règles par défaut du module B3)');
-  out.push('crédits pleins/jour : 40 cartes → ' + res.perDay[40] + ' ; 80 → ' + res.perDay[80] + ' ; 150 → ' + res.perDay[150]);
-  for (const p of res.plans) { out.push('- ' + p.K + ' cartes/jour, ' + p.W + ' semaines : ' + p.credits.toLocaleString('fr-FR') + ' crédits'); }
+  out.push('## Crédits disponibles (règles v2 du module B3 : aube 75, pleine valeur jusqu\'à 60, soft 10)');
+  out.push('crédits pleins/jour : ' + Object.keys(res.perDay).map((K) => K + ' cartes → ' + res.perDay[K]).join(' ; '));
+  for (const p of res.plans) { out.push('- référence ' + p.K + ' cartes/jour, ' + p.W + ' semaines : ' + p.credits.toLocaleString('fr-FR') + ' crédits'); }
+  const refCredits = res.plans[0].credits;
+  out.push('- semaines pour ces crédits (régularité parfaite, sans journée accomplie) : ' + Object.keys(res.perDay).map((K) =>
+    K + ' cartes/j → ' + (refCredits / (7 * res.perDay[K])).toFixed(1)).join(' ; '));
   // Taux proposés. Budget de référence ère 1 = techs + bâtiments λ = 10 sans hôpitaux.
   const ref = res.scenarios.find((x) => x.lambda === 10);
   const era1 = addCost({}, res.techCost);
@@ -151,9 +160,8 @@ function table(res) {
     }).join(' | ') + ' |');
   }
   out.push('');
-  out.push('Ère 0 en une semaine, crédit direct = 100 % (RNA et DNA par crédit) : ' + [40, 80, 150].map((K) => {
-    const c = 7 * res.perDay[K]; return K + ' cartes/j → RNA ' + (e0.RNA / c).toFixed(1) + ', DNA ' + (e0.DNA / c).toFixed(1);
-  }).join(' ; '));
+  out.push('Ère 0 en ' + REF.era0Days + ' jours d\'étude à ' + REF.cards + ' cartes/j = ' + res.era0Credits + ' crédits, crédit direct = 100 % : RNA ' +
+    (e0.RNA / res.era0Credits).toFixed(2) + ', DNA ' + (e0.DNA / res.era0Credits).toFixed(2) + ' par crédit');
   return out.join('\n');
 }
 

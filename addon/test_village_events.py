@@ -82,7 +82,7 @@ class SensorTest(unittest.TestCase):
         s.refresh(self.now)
         first = s.events_since(0)
         n = first["cursor"]
-        self.assertEqual(n, 5)                       # 4 révisions + 1 photo du jour
+        self.assertEqual(n, 4)                       # 3 révisions du jour + 1 photo (sans début de partie : aujourd'hui seulement)
         self.db.execute("insert into revlog values (?,?,?,?,?,?,?)", (self.r1 + 5000, 101, 3, 2, 1, 1, 1000))
         new = s.refresh(self.now)
         self.assertEqual(len(new), 1)
@@ -100,6 +100,25 @@ class SensorTest(unittest.TestCase):
         s.refresh(self.now)
         again = s.events_since(cur)                  # partie plus ancienne : tout est renvoyé
         self.assertEqual(len([e for e in again["events"] if e["k"] == "review"]), 4)
+
+    def test_day_done(self):
+        s = V.Sensor(self.q, "d")
+        s.refresh(self.now)
+        self.assertEqual(s.done, {})                 # carte 100 encore due
+        self.db.execute("update cards set due = due + 5 where id = 100")
+        s.refresh(self.now + 61000)                  # nouvelle photo après une minute
+        self.assertEqual(list(s.done), [str(self.today)])
+        ev = s.events_since(0)["events"][-1]
+        self.assertEqual((ev["k"], ev["day"]), ("done", self.today))
+        s.refresh(self.now + 200000, force=True)
+        self.assertEqual(len([e for e in s.events if e["k"] == "done"]), 1)   # une seule fois par jour
+
+    def test_day_done_refused_when_cards_suspended_today(self):
+        s = V.Sensor(self.q, "d")
+        s.refresh(self.now)
+        self.db.execute("update cards set queue = -1 where id = 100")   # vider sa file en suspendant
+        s.refresh(self.now + 61000)
+        self.assertEqual(s.done, {})
 
     def test_strip_html(self):
         self.assertEqual(V.strip_html("<style>x{}</style><b>Bon</b>jour<br>&amp; toi"), "Bon jour\n& toi")

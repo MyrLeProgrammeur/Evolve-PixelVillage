@@ -11640,5 +11640,8 @@
   "wiki_achievements_incomplete": "Incomplete",
   "wiki_achievements_completed": "Completed",
   "wiki_search_placeholder": "No results found.",
-  "wiki_search_regex_support": "RegEx Supported"
+  "wiki_search_regex_support": "RegEx Supported",
+  "anki_gather_hint": "The village grows from your Anki reviews.",
+  "anki_gather_hint_due": "The village grows from your Anki reviews: %0 cards due today.",
+  "anki_gather_hint_none": "Nothing is due in Anki today: the village rests."
 }

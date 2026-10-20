@@ -5,6 +5,8 @@ fournit les révisions de la collection, en lecture seule (village_events.py).
 - Page -> Python : pycmd("av:" + JSON) ; Python répond par le rappel de pycmd (anki-host.js).
 - La partie est enregistrée dans le dossier du profil Anki (anki-village/save.txt) : le profil web
   des add-ons est éphémère (QWebEngineProfile sans nom), son localStorage ne survit pas à Anki.
+- Le capteur vit avec le profil, pas avec la fenêtre : une synchro ou une fin de séance est constatée
+  (photo du jour, journée accomplie) même quand le village est fermé.
 """
 
 import json
@@ -12,6 +14,7 @@ import os
 import secrets
 
 from aqt import gui_hooks, mw
+from aqt.main import MainWindowState
 from aqt.qt import QAction, QDialog, QTimer, QUrl, QVBoxLayout
 from aqt.utils import restoreGeom, saveGeom
 from aqt.webview import AnkiWebView
@@ -24,6 +27,7 @@ ADDON_DIR = os.path.dirname(__file__)
 mw.addonManager.setWebExports(__name__, r"(index\.html|.*\.(js|css|png|svg|ico|woff2?|ttf|eot)|strings/.*\.json)")
 
 _dialog = None
+_profile = None   # (Store, Sensor) du profil ouvert
 
 
 # --------------------------------------------------------------------------- stockage par profil
@@ -81,6 +85,40 @@ class Store:
         keep = sorted(snaps, key=int)[-90:]
         self.write("snapshots.json", json.dumps({k: snaps[k] for k in keep}))
 
+    def done(self):
+        try:
+            return json.loads(self.read("done.json", "{}"))
+        except ValueError:
+            return {}
+
+    def store_done(self, done):
+        self.write("done.json", json.dumps(done))
+
+
+def _current():
+    """Store et capteur du profil ouvert, créés à la première demande."""
+    global _profile
+    if _profile is None and mw.col:
+        store = Store(mw.pm.profileFolder())
+        sensor = Sensor(lambda sql, *a: mw.col.db.all(sql, *a), store.device(), store.snapshots(), store.done())
+        _profile = (store, sensor)
+    return _profile
+
+
+def _refresh(force=False):
+    """Relit le revlog (et la photo du jour si besoin) ; enregistre ce qui est nouveau."""
+    cur = _current()
+    if not cur:
+        return None
+    store, sensor = cur
+    snaps, done = len(sensor.snapshots), len(sensor.done)
+    sensor.refresh(force=force)
+    if len(sensor.snapshots) != snaps:
+        store.store_snapshots(sensor.snapshots)
+    if len(sensor.done) != done:
+        store.store_done(sensor.done)
+    return sensor
+
 
 def _write_seed(store):
     """Écrit user_files/save.js, chargé par anki-host.js avant le démarrage du jeu."""
@@ -96,8 +134,7 @@ def _write_seed(store):
 class VillageDialog(QDialog):
     def __init__(self):
         super().__init__(mw)
-        self.store = Store(mw.pm.profileFolder())
-        self.sensor = Sensor(lambda sql, *a: mw.col.db.all(sql, *a), self.store.device(), self.store.snapshots())
+        self.store, self.sensor = _current()
         self._finishing = False
         self.setWindowTitle("Evolve Village")
         self.web = AnkiWebView(parent=self, title="evolve_village")
@@ -123,11 +160,8 @@ class VillageDialog(QDialog):
             s = self.sensor
             if msg.get("from") is None:          # partie pas encore chargée : statut seulement
                 return {"enabled": True, "status": s.status(), "cursor": 0, "events": []}
-            before = len(s.snapshots)
             s.ensure_from(int(msg["from"]))
-            s.refresh()
-            if len(s.snapshots) != before:
-                self.store.store_snapshots(s.snapshots)
+            _refresh()
             return dict(enabled=True, status=s.status(), **s.events_since(msg.get("since")))
         if kind == "cards":
             out = {}
@@ -144,6 +178,12 @@ class VillageDialog(QDialog):
             return {"ok": True}
         if kind == "clear":
             self.store.clear_save()
+            return {"ok": True}
+        if kind == "review":
+            # bouton « Réviser » du panneau Anki : la fenêtre principale revient sur la liste des paquets
+            mw.moveToState("deckBrowser")
+            mw.activateWindow()
+            mw.raise_()
             return {"ok": True}
         return {"error": "unknown"}
 
@@ -170,7 +210,6 @@ class VillageDialog(QDialog):
                 return
             state["done"] = True
             self.store.store_save(data)
-            self.store.store_snapshots(self.sensor.snapshots)
             saveGeom(self, "evolve_village")
             QDialog.reject(self)
 
@@ -205,9 +244,23 @@ def _notify(*_):
         _dialog.notify()
 
 
+def _after_sync(*_):
+    _refresh(force=True)
+    _notify()
+
+
+def _state_changed(new_state: MainWindowState, old_state: MainWindowState):
+    # Fin d'une séance de révision : photo immédiate, pour constater une journée accomplie.
+    if old_state == "review" and new_state != "review":
+        _refresh(force=True)
+        _notify()
+
+
 def _profile_closing():
+    global _profile
     if _dialog is not None:
         _dialog.finish()
+    _profile = None
 
 
 action = QAction("Evolve Village", mw)
@@ -215,5 +268,6 @@ action.triggered.connect(open_village)
 mw.form.menuTools.addAction(action)
 
 gui_hooks.reviewer_did_answer_card.append(_notify)
-gui_hooks.sync_did_finish.append(_notify)
+gui_hooks.sync_did_finish.append(_after_sync)
+gui_hooks.state_did_change.append(_state_changed)
 gui_hooks.profile_will_close.append(_profile_closing)

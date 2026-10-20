@@ -194,6 +194,13 @@ export function loopTimers(){
 // Adds accelerated time if enough time has passed since `global.stats.current`. Returns true if there was accelerated
 // time added. If the parameter is true, it will only add the time if a threshold of 120s has been reached.
 export function addATime(currentTimestamp){
+    /* [anki-fork] horloge à cartes : le temps vient des révisions, pas de temps accéléré hors ligne (GD §5.3) */
+    if (global.anki && global.anki.clock && global.anki.clock.mode === 'cards'){
+        global.settings.at = 0;
+        atrack.t = 0;
+        global.stats.current = currentTimestamp;
+        return;
+    }
     // The second case is used for the initialization of atrack.t.
     if (exceededATimeThreshold(currentTimestamp) || global.stats.hasOwnProperty('current') && global.settings.at > 0){
         let timeDiff = currentTimestamp - global.stats.current;

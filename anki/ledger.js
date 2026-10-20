@@ -10,6 +10,11 @@
  *  - rendement décroissant par jour (forme et paramètres configurables) ;
  *  - matériau noble seulement si l'intervalle AVANT la réponse est >= 21 jours ;
  *  - rien ne se perd : ce qui a été versé n'est jamais repris (settle est monotone).
+ * Règles v2 (rapports/plan/GD-horloge-volume.md, décisions de Mathéo du 2026-10-20) :
+ *  - aube : les 10 premiers crédits payés du jour valent chacun 7,5 crédits de plus (75 en tout), base seulement ;
+ *  - pleine valeur jusqu'à 60 crédits, puis décroissance raide (soft 10) ;
+ *  - nobles : même courbe, cartes mûres du jour placées en tête ;
+ *  - journée accomplie : toutes les dues du matin faites (événement `done` du capteur) -> bonus de base fixe.
  *
  * Utilisable dans Node (require) et dans la page (window.AnkiLedger).
  */
@@ -22,18 +27,20 @@
   const DAY_MS = 86400000;
 
   const DEFAULT_RULES = {
-    version: 1,
+    version: 2,
     rolloverHour: 4,
     unit: 1000,                       // valeur d'un crédit plein, en millièmes
     // Rendement décroissant de la base, par jour Anki, selon le rang du crédit dans la journée.
     //  flat : toujours `unit` ; sqrt : `unit` jusqu'à `full`, puis C(m) = 2*unit*(sqrt(s*(s+m)) - s)
     //  (pente 1 au départ, 3s crédits en plus valent 2s) ; cap : `unit` jusqu'à `full`, puis 0.
     //  hardCap (> 0) : aucun crédit payé au-delà de ce rang, quelle que soit la forme.
-    diminishing: { shape: 'sqrt', full: 50, soft: 50, hardCap: 0 },
+    diminishing: { shape: 'sqrt', full: 60, soft: 10, hardCap: 0 },
+    dawn: { cards: 10, value: 7500 },  // aube : millièmes ajoutés à chacun des `cards` premiers crédits payés du jour
+    done: { value: 15000 },            // journée accomplie (toutes les dues du matin faites) : millièmes de base
     newCap: 20,                       // nouvelles cartes payées par jour, au plus
     minAnswerMs: 0,                   // 0 = pas de filtre ; 1500 = règle 8 du rapport 7 (revlog seulement)
     excludeTypes: [3, 4, 5],          // revlog.type : 3 filtrée sans replanif, 4 manuelle, 5 replanifiée
-    noble: { minIvl: 21, value: 1000, requiresSuccess: false, dailyCap: 0 },
+    noble: { minIvl: 21, value: 1000, requiresSuccess: false, dailyCap: 0, shape: 'curve' },  // curve : rendement décroissant
     maturity: [21, 180, 365],         // seuils du registre de maturation (une fois par carte et par seuil)
     day: { min: 10 },                 // jour compté si crédits >= max(1, min(day.min, dues du matin))
     streak: { jokersPerWeek: 2 },
@@ -104,6 +111,11 @@
     for (let r = 1; r <= n; r++) { sum += marginalR(r, R); }
     return sum;
   }
+  /** Base (millièmes) d'une journée de `n` crédits payés : rendement décroissant + aube (sans bonus `done`). */
+  function dayValue(n, rules) {
+    const R = rulesOf(rules);
+    return cumulative(n, R) + Math.min(n, R.dawn.cards) * R.dawn.value;
+  }
 
   function eligible(e, R) {
     if (e.b === 0) { return false; }
@@ -125,6 +137,7 @@
     const groups = new Map();            // "cid:day" -> [events]
     const dues = Object.assign({}, o.dues || {});
     const states = {};
+    const done = {};                      // jour -> événement `done` (journée accomplie)
     let firstDay = null, lastDay = null;
 
     const evs = (events || []).filter(function (e) { return e && typeof e === 'object'; }).slice().sort(cmpEv);
@@ -132,6 +145,12 @@
       if (e.k === 'state' && Number.isInteger(e.day)) {
         states[e.day] = e;              // le dernier dans l'ordre total gagne
         if (typeof e.dueMorning === 'number') { dues[e.day] = e.dueMorning; }
+        continue;
+      }
+      if (e.k === 'done' && Number.isInteger(e.day)) {
+        if (!(e.day in done) || e.t < done[e.day].t) { done[e.day] = e; }   // le premier constat du jour
+        if (firstDay === null || e.day < firstDay) { firstDay = e.day; }
+        if (lastDay === null || e.day > lastDay) { lastDay = e.day; }
         continue;
       }
       if (e.k !== 'review' || !Number.isInteger(e.day) || e.cid === undefined) { continue; }
@@ -169,24 +188,32 @@
     const maturations = [];
     for (const th of R.maturity) { matured[th] = new Set(); }
     const totals = { base: 0, noble: 0, credits: 0, paidCredits: 0 };
-    const dayKeys = Array.from(new Set(Array.from(byDay.keys()).concat(Array.from(excludedByDay.keys())))).sort(function (a, b) { return a - b; });
+    const dayKeys = Array.from(new Set(Array.from(byDay.keys()).concat(Array.from(excludedByDay.keys()))
+      .concat(Object.keys(done).map(Number)))).sort(function (a, b) { return a - b; });
     const dayInfo = {};
     for (const day of dayKeys) {
       const list = (byDay.get(day) || []).sort(function (a, b) { return (a.t - b.t) || (a.cid < b.cid ? -1 : a.cid > b.cid ? 1 : 0); });
       let rank = 0, newPaid = 0, newCapped = 0, nobleCount = 0;
-      const D = { day: day, credits: list.length, base: 0, noble: 0, newPaid: 0, newCapped: 0,
+      // Nobles « mûres en tête » : le rang noble d'une carte est son rang parmi les seules mûres du jour.
+      let nobleRank = 0;
+      const D = { day: day, credits: list.length, base: 0, noble: 0, newPaid: 0, newCapped: 0, dawn: 0, done: 0,
         excluded: excludedByDay.get(day) || 0, buttons: [0, 0, 0, 0, 0], cards: [], lapseMature: 0,
         maturations: 0, paidBase: 0, paidNoble: 0, counted: false, dueMorning: dues[day] };
       for (const c of list) {
         let base = 0;
         if (c.nw && newPaid >= R.newCap) { newCapped++; c.newCapped = true; }
-        else { rank++; base = marginalR(rank, R); if (c.nw) { newPaid++; } }
+        else {
+          rank++; base = marginalR(rank, R); if (c.nw) { newPaid++; }
+          if (rank <= R.dawn.cards) { base += R.dawn.value; D.dawn += R.dawn.value; c.dawn = true; }
+        }
         c.rank = c.newCapped ? 0 : rank;
         let noble = 0;
         if (c.p !== undefined && c.p >= R.noble.minIvl) {
           const success = c.b === undefined ? true : c.b >= 2;
           if ((!R.noble.requiresSuccess || success) && (!R.noble.dailyCap || nobleCount < R.noble.dailyCap)) {
-            noble = R.noble.value; nobleCount++;
+            nobleRank++;
+            noble = R.noble.shape === 'curve' ? Math.floor(R.noble.value * marginalR(nobleRank, R) / R.unit) : R.noble.value;
+            nobleCount++;
           }
           if (c.b === 1) { c.lapseMature = true; D.lapseMature++; }
         }
@@ -207,6 +234,11 @@
         credits.push(c);
       }
       D.newPaid = newPaid; D.newCapped = newCapped;
+      // Journée accomplie : constatée par le capteur (dues du matin toutes faites), payée une fois par jour.
+      if (done[day] && R.done.value > 0) {
+        D.done = R.done.value; D.base += D.done;
+        if (done[day].t >= epoch) { D.paidBase += D.done; totals.base += D.done; }
+      }
       // Jour compté (définition commune C/D) : au moins une carte, et au moins min(day.min, dues du matin).
       const need = Math.max(1, typeof D.dueMorning === 'number' ? Math.min(R.day.min, D.dueMorning) : R.day.min);
       D.counted = D.credits >= need;
@@ -272,6 +304,6 @@
 
   return {
     DEFAULT_RULES: DEFAULT_RULES, rulesOf: rulesOf, ankiDay: ankiDay, localAnkiDay: localAnkiDay, weekOf: weekOf,
-    isqrt: isqrt, cumulative: cumulative, marginal: marginal, replay: replay, settle: settle, newCredits: newCredits
+    isqrt: isqrt, cumulative: cumulative, dayValue: dayValue, marginal: marginal, replay: replay, settle: settle, newCredits: newCredits
   };
 });
