@@ -90,9 +90,19 @@
     paint();
   }
 
+  /* Source des événements : l'add-on Anki bureau (anki-host.js, par pycmd) ou le serveur local (serve.js --anki).
+     Dans l'add-on, on donne aussi le début de la partie (epoch) pour que Python ne lise pas l'historique antérieur. */
+  function fetchEvents() {
+    var host = window.AnkiVillageHost;
+    if (host) {
+      var g = game();
+      return host.request('events', { since: S.cursor, from: g ? (window.ankiState().epoch || dayStart(today())) : null });
+    }
+    return fetch('api/anki/events?since=' + S.cursor, { cache: 'no-store' }).then(function (r) { return r.json(); });
+  }
   function poll() {
-    if (S.enabled === false) { return Promise.resolve(); }
-    return fetch('api/anki/events?since=' + S.cursor, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+    if (S.enabled === false && !window.AnkiVillageHost) { return Promise.resolve(); }
+    return fetchEvents().then(function (j) {
       if (!j || j.enabled === false) { S.enabled = false; paint(); return; }
       S.enabled = true; S.status = j.status || null; S.lastOk = Date.now(); S.error = j.status && j.status.error;
       (j.events || []).forEach(function (e) { if (e && e.id) { S.events.set(e.id, e); } });
@@ -123,7 +133,7 @@
     pop = document.createElement('div'); pop.id = 'av-anki-pop';
     var c = window.ankiClock ? window.ankiClock.get() : null, a = window.ankiState ? window.ankiState() : null;
     var html = '<b>Cartes Anki</b><br>';
-    if (S.enabled !== true) { html += 'Non relié. Lancer <code>node serve.js --anki</code>.'; }
+    if (S.enabled !== true) { html += window.AnkiVillageHost ? 'Non relié : la collection Anki n\'a pas répondu.' : 'Non relié. Lancer <code>node serve.js --anki</code>.'; }
     else {
       html += 'Aujourd\'hui : ' + (a ? a.today.credits : 0) + ' cartes créditées' + (a && a.today.counted ? ' (jour compté)' : '') + '<br>';
       if (S.error) { html += 'Capteur : ' + S.error + '<br>'; }
@@ -165,7 +175,10 @@
     decks: function () { return S.status && S.status.snapshot ? S.status.snapshot.decks : null; },
     events: function () { return Array.from(S.events.values()); },
     on: function (name, fn) { (S.listeners[name] = S.listeners[name] || []).push(fn); },
-    cardText: function (cids) { return fetch('api/anki/cards?cids=' + cids.join(','), { cache: 'no-store' }).then(function (r) { return r.json(); }); },
+    cardText: function (cids) {
+      if (window.AnkiVillageHost) { return window.AnkiVillageHost.request('cards', { cids: cids }); }
+      return fetch('api/anki/cards?cids=' + cids.join(','), { cache: 'no-store' }).then(function (r) { return r.json(); });
+    },
     rates: RATES,
     refresh: poll
   };
