@@ -5,6 +5,7 @@ import { jobScale, teamsterCap } from './jobs.js';
 import { hellSupression } from './portal.js';
 import { flib } from './functions.js';
 import { govActive } from './governor.js';
+import { ankiMult } from './anki.js';
 
 export function highPopAdjust(v){
     if (global.race['high_pop']){
@@ -502,9 +503,10 @@ export function production(id,val,wiki){
                     let rank = global.stats.achieve['nightmare'] && global.stats.achieve.nightmare['mg'] ? global.stats.achieve.nightmare.mg : 0;
                     boost += +(traits.psychic.vars()[3] / 50000 * rank * global.race.psychicPowers.channel.boost).toFixed(3);
                 }
-                return 1 + boost;
+                return (1 + boost) * ankiMult(val);
             }
-            return 1;
+            /* [anki-fork] single point for Anki multipliers per resource (1 when no bonus is set) */
+            return ankiMult(val);
         }
         case 'psychic_cash':
         {

@@ -22,6 +22,7 @@ import { index, mainVue, initTabs, loadTab } from './index.js';
 import { setWeather, seasonDesc, astrologySign, astroVal } from './seasons.js';
 import { getTopChange } from './wiki/change.js';
 import { enableDebug, updateDebugData } from './debug.js';
+import { ankiClockGate, ankiMaybeSave } from './anki.js';
 
 {
     $(document).ready(function() {
@@ -843,6 +844,8 @@ export function execGameLoops(periods = 1){
     // Limit to 1 minute (12 game days) of simulation per call
     const maxCatchUp = webWorker.longRatio * 12;
     periods = Math.min(periods, maxCatchUp); 
+    /* [anki-fork] card clock: in 'cards' mode the number of simulation ticks comes from reviews (src/anki.js) */
+    periods = ankiClockGate(periods, maxCatchUp);
 
     while (webWorker.s && periods--){
         ++loopTick;
@@ -860,6 +863,7 @@ export function execGameLoops(periods = 1){
         // Overflow prevention
         if (doMid && doLong){ loopTick = 0; }
     }
+    ankiMaybeSave(); /* [anki-fork] keeps saving while the card clock is stopped */
 }
 
 if (window.Worker){
