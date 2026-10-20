@@ -23,14 +23,7 @@ function chain() {
   return p;
 }
 
-async function loadGame() {
-  const esbuild = require('esbuild');
-  // Mêmes modules, dans le même ordre que src/main.js (les imports circulaires d'Evolve dépendent de cet ordre).
-  const mods = fs.readFileSync(path.join(ROOT, 'src', 'main.js'), 'utf8').split('\n')
-    .map((l) => /^import .* from '\.\/([^']+)';/.exec(l)).filter(Boolean).map((m) => m[1]);
-  const entry = mods.map((m) => "import './src/" + m + "';").join('\n') +
-    "\nimport { global } from './src/vars.js'; import { actions } from './src/actions.js'; import { races } from './src/races.js'; export { global, actions, races };";
-  const r = await esbuild.build({ stdin: { contents: entry, resolveDir: ROOT, loader: 'js' }, bundle: true, write: false, format: 'iife', globalName: 'EV', logLevel: 'silent' });
+function makeContext() {
   const store = new Map();
   const $ = chain();
   const strings = JSON.parse(fs.readFileSync(path.join(ROOT, 'strings', 'strings.json'), 'utf8'));
@@ -47,9 +40,21 @@ async function loadGame() {
     setTimeout: () => 0, setInterval: () => 0, clearTimeout() {}, clearInterval() {}, Date, Math, JSON, Promise, Intl
   };
   ctx.window = ctx; ctx.self = ctx; ctx.globalThis = ctx;
+  return ctx;
+}
+
+async function loadGame() {
+  const esbuild = require('esbuild');
+  // Mêmes modules, dans le même ordre que src/main.js (les imports circulaires d'Evolve dépendent de cet ordre).
+  const mods = fs.readFileSync(path.join(ROOT, 'src', 'main.js'), 'utf8').split('\n')
+    .map((l) => /^import .* from '\.\/([^']+)';/.exec(l)).filter(Boolean).map((m) => m[1]);
+  const entry = mods.map((m) => "import './src/" + m + "';").join('\n') +
+    "\nimport { global } from './src/vars.js'; import { actions } from './src/actions.js'; import { races } from './src/races.js'; export { global, actions, races };";
+  const r = await esbuild.build({ stdin: { contents: entry, resolveDir: ROOT, loader: 'js' }, bundle: true, write: false, format: 'iife', globalName: 'EV', logLevel: 'silent' });
+  const ctx = makeContext();
   vm.createContext(ctx);
   vm.runInContext(r.outputFiles[0].text, ctx, { filename: 'evolve-budget.js' });
   return ctx.EV;
 }
 
-module.exports = { loadGame, ROOT };
+module.exports = { loadGame, makeContext, ROOT };
