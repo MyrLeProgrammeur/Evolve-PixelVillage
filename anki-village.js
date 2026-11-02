@@ -2,8 +2,8 @@
    Reads window.evolve.global (settings.expose is forced on in this fork). Offline, no dependency. */
 (function () {
   'use strict';
-  var KIT = ['palette', 'pieces_b1', 'pieces_b2', 'pieces_b3', 'pieces_b4', 'pieces_b5', 'pieces_b6', 'pieces_b7', 'pieces_b8', 'pieces_b9',
-    'spritekit', 'village', 'village_b3', 'village_b4', 'citizens', 'world', 'ui', 'era1', 'evolution'];
+  var KIT = ['palette', 'pieces_b1', 'pieces_b2', 'pieces_b3', 'pieces_b4', 'pieces_b5', 'pieces_b6', 'pieces_b7', 'pieces_b8', 'pieces_b9', 'pieces_b10',
+    'spritekit', 'village', 'village_b3', 'village_b4', 'citizens', 'world', 'ui', 'era1', 'evolution', 'era2'];
   var MODES = ['off', 'peek', 'full'], mode = 1, runner = null, canvas = null, panel, holder, note, btn;
   try { var m = parseInt(localStorage.getItem('avMode'), 10); if (m >= 0 && m <= 2) mode = m; } catch (e) {}
 

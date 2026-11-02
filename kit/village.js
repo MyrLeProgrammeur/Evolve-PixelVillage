@@ -14,6 +14,10 @@
     cottage: { 2: { w: ['pinewood', 'driftwood'], r: ['walnut', 'oak', 'driftwood'] }, 3: { w: ['lime', 'ochre'], r: ['terracotta', 'brick', 'ochre'] } },
     lodge: { 1: { w: ['oak', 'walnut'], r: ['hide', 'rust', 'cream'] }, 2: { w: ['walnut', 'driftwood'], r: ['walnut', 'driftwood', 'oak'] }, 3: { w: ['walnut', 'driftwood'], r: ['walnut', 'slate', 'driftwood'] } }
   };
+  /* tier 4 (brick and steel, tech.high_tech >= 2): engine brick or painted render under corrugated zinc, rusted iron or red-lead sheets */
+  RAMPS.basic_housing[4] = { w: ['ironbrick', 'rosewash'], r: ['zinc', 'rust', 'oxide'] };
+  RAMPS.cottage[4] = { w: ['ironbrick', 'ochre'], r: ['zinc', 'oxide', 'rust'] };
+  RAMPS.lodge[4] = { w: ['walnut', 'driftwood'], r: ['zinc', 'rust', 'driftwood'] };
   var PAINT = ['teal', 'indigo', 'madder', 'saffron', 'plum', 'sage', 'rose', 'rust'];
   var BLOOM = ['rose', 'saffron', 'cream', 'plum', 'madder'];
   var ACC_POOL = ['pot_flowers', 'laundry', 'tool_lean', 'flowerbox', 'herb_bundle', 'wind_chime', 'planter_hang', 'lantern', 'barrel'];
@@ -22,7 +26,7 @@
   COMPOSERS.basic_housing = house; COMPOSERS.cottage = house; COMPOSERS.lodge = house;
   /* DYN[type](state, t, item) -> opts {af: anim frame, fq: pile fill 0..1, metal, on}; registered by later batches */
   var DYN = SK.DYN = SK.DYN || {};
-  function okey(o) { return o ? [o.af | 0, o.fq == null ? '' : o.fq, o.metal || '', o.on ? 1 : 0, o.x || ''].join(':') : ''; }
+  function okey(o) { return o ? [o.af | 0, o.fq == null ? '' : o.fq, o.metal || '', o.on ? 1 : 0, o.x || '', o.e2 || ''].join(':') : ''; }
 
   /* ---------- sectors and slots ---------- */
   var CFG = {
@@ -77,8 +81,11 @@
     return SLOTS;
   }
   function visN(n) { return n <= 8 ? n : Math.min(24, 8 + round(4 * Math.log2(n / 8))); }
-  function tierOf(st) { var t = (st && st.tech) || {}; return (t.cement | 0) >= 1 ? 3 : ((t.axe | 0) >= 2 ? 2 : 1); }
-  function typeTier(type, tier) { return type === 'cottage' ? Math.max(2, tier) : tier; }
+  function tierOf(st) { var t = (st && st.tech) || {}; return (t.high_tech | 0) >= 2 ? 4 : (t.cement | 0) >= 1 ? 3 : ((t.axe | 0) >= 2 ? 2 : 1); }
+  /* at tier 4, 30 % of dwellings (by slot, stable) keep their tier-3 look so the village keeps its old houses */
+  var DWELL = { basic_housing: 1, cottage: 1, lodge: 1 };
+  function keepOld(type, k) { return DWELL[type] && k != null && X().ih(k | 0, X().hash(type) & 0xffff, 404) < 0.3; }
+  function typeTier(type, tier, k) { if (tier >= 4 && keepOld(type, k)) tier = 3; return type === 'cottage' ? Math.max(2, tier) : tier; }
   function plan(st) {
     var S = slots(), city = (st && st.city) || {}, per = {}, tot = 0, list = [];
     X().BUILDINGS.forEach(function (b) { var n = ((city[b.key] || {}).count) | 0; if (n && SK.gate && !SK.gate(b.key, st)) n = 0; var v = Math.min(visN(n), (S[b.key] || []).length); per[b.key] = { n: n, v: v }; tot += v; });
@@ -129,9 +136,12 @@
   function faceX(g, f, a) { return (f === 'L' ? g.BL[0] : g.BR[0]) + a; }
   function snap(a, f, w) { var odd = f === 'L' || w % 2 === 0; a = round(a); if (odd !== (mod(a, 2) === 1)) a += 1; return a; }
   function onFace(p, g, f, name, map, a, z, sh) {
+    /* tier 4: glazed windows become tall mullioned steel windows where the wall is high enough (hook for era2.js) */
+    if (SK.T4 && name === 'win_glazed' && SK.PIECES.win_tall && z + 11 <= g.H - 1) name = 'win_tall';
     var d = SK.PIECES[name], x = faceX(g, f, a), yb = faceY(g, f, a) - z, sp;
     if (f === 'L') { sp = X().sprite(name, map, { shade: sh | 0 }); p.blit(sp, x, yb - (d.h - 1 - (d.skew ? floor((d.w - 1) / 2) : 0))); }
     else { sp = X().sprite(name, map, { flip: d.mirror !== 'none', shade: 1 + (sh | 0) }); p.blit(sp, x, yb - (d.h - 1)); }
+    if (name === 'win_tall' && SK.PIECES.hd_steel_lintel) faceStrip(p, g, f, 'hd_steel_lintel', {}, a - 1, 8, z + 9);
   }
   function strip(p, name, map, x0, x1, yfn, sh, phase) {
     var sp = X().sprite(name, map, { shade: sh | 0 });
@@ -158,7 +168,7 @@
   /* ---------- the living-building composer ---------- */
   var BC = new Map();
   function building(type, tier, k, season, lvl, o) {
-    tier = typeTier(type, tier); lvl = lvl | 0;
+    tier = typeTier(type, tier, k); lvl = lvl | 0;
     var ok = okey(o), key = [type, tier, k, season, lvl, ok].join('|'); if (BC.has(key)) return BC.get(key);
     var out = COMPOSERS[type](type, tier, k, season, lvl, o || {});
     BC.set(key, out);
@@ -173,17 +183,19 @@
       spec = { w: 1, d: 1, h: (tier === 1 ? 14 : tier === 2 ? 17 : 18) + v.dh + extra, plinth: tier === 1 ? 0 : 3, plinthRamp: 'river',
         wall: { tex: tier === 1 ? 'tex_logs' : tier === 2 ? 'tex_planks' : 'tex_wattle', ramp: wallR },
         roof: { type: v.roofType, axis: v.axis, tex: tier === 1 ? 'tex_thatch' : tier === 2 ? 'tex_shingles' : 'tex_tiles', ramp: roofR, pitch: tier === 1 ? 4 : 2 } };
-      if (tier === 3) { spec.plinthTex = 'tex_brick'; spec.plinthRamp = 'brick'; spec.plinth = 4; }
+      if (tier >= 3) { spec.plinthTex = 'tex_brick'; spec.plinthRamp = 'brick'; spec.plinth = 4; }
+      if (tier === 4) { spec.wall.tex = wallR === 'ironbrick' ? 'tex_brick' : 'tex_wattle'; spec.roof.tex = 'tex_corrugated'; spec.roof.pitch = 1; spec.plinthRamp = 'ironbrick'; spec.h += 1; }
     } else if (type === 'cottage') {
-      var h = (tier === 3 ? 25 : 23) + v.dh + extra;
-      spec = tier === 3
+      var h = (tier >= 3 ? 25 : 23) + v.dh + extra;
+      spec = tier >= 3
         ? { w: 1, d: 1, h: h, plinth: 2, wall: { tex: 'tex_cutstone', ramp: v.wi ? 'sandstone' : 'river' }, wall2: { tex: 'hd_halftimber', ramp: wallR, z: 12, map: { WOOD: 'walnut' } }, roof: { type: 'gable', axis: v.axis, tex: 'tex_tiles', ramp: roofR, pitch: 3 } }
         : { w: 1, d: 1, h: h, plinth: 3, wall: { tex: 'tex_planks', ramp: wallR }, wall2: { tex: 'tex_planks', ramp: v.wi ? 'pinewood' : 'oak', z: 12 }, roof: { type: 'gable', axis: v.axis, tex: 'tex_shingles', ramp: roofR, pitch: 3 } };
       spec.bandRamp = 'walnut';
+      if (tier === 4) { spec.wall = { tex: 'tex_brick', ramp: 'ironbrick' }; spec.wall2 = { tex: 'tex_wattle', ramp: wallR === 'ironbrick' ? 'rosewash' : wallR, z: 12 }; spec.roof.tex = 'tex_corrugated'; spec.roof.pitch = 2; }
     } else {
-      spec = { w: 1, d: 1, h: (tier === 1 ? 11 : 13) + v.dh + extra, plinth: tier === 3 ? 5 : tier === 2 ? 2 : 0,
+      spec = { w: 1, d: 1, h: (tier === 1 ? 11 : 13) + v.dh + extra, plinth: tier >= 3 ? 5 : tier === 2 ? 2 : 0,
         wall: { tex: tier === 1 ? 'tex_logs' : 'tex_planks', ramp: wallR },
-        roof: { type: 'gable', axis: v.axis, tex: tier === 1 ? 'tex_wattle' : 'tex_shingles', ramp: roofR, pitch: 6 } };
+        roof: { type: 'gable', axis: v.axis, tex: tier === 1 ? 'tex_wattle' : tier === 4 ? 'tex_corrugated' : 'tex_shingles', ramp: roofR, pitch: 6 } };
       doorFace = v.axis === 'y' ? 'L' : 'R';
     }
     spec.snow = snow;
@@ -203,28 +215,28 @@
     }
     if (v.ivy) onFace(p, g, other, 'hd_ivy', { FOLIAGE: season === 3 ? 'frost' : 'conifer', ACCENT: v.bloom }, other === 'L' ? 1 : 7, spec.plinth || 0);
     onFace(p, g, doorFace, doorName, { MAIN: tier === 1 ? 'oak' : v.paint, ACCENT: v.paint2 }, doorA, 0);
-    if (tier >= 2 && (v.lintel || tier === 3)) faceStrip(p, g, doorFace, 'hd_lintel', { ACCENT: v.paint2 }, doorA - 2, 10, doorTop);
-    if (tier === 3) {
+    if (tier >= 2 && (v.lintel || tier >= 3)) faceStrip(p, g, doorFace, 'hd_lintel', { ACCENT: v.paint2 }, doorA - 2, 10, doorTop);
+    if (tier >= 3) {
       var ds = x.sprite('hd_doorstep', folMap, { flip: doorFace === 'R' });
       p.blit(ds, faceX(g, doorFace, doorA) - 1, faceY(g, doorFace, doorA + 2) - 1);
     }
     var wins = [], wz = type === 'cottage' ? 4 : (tier === 1 ? 5 : 6);
     if (type === 'lodge') { if (tier > 1 || v.windows) wins.push([other, 5, wz]); }
     else {
-      if (v.windows >= 1) wins.push([other, tier === 3 && type === 'basic_housing' ? (other === 'L' ? 7 : 5) : 5, wz]);
+      if (v.windows >= 1) wins.push([other, tier >= 3 && type === 'basic_housing' ? (other === 'L' ? 7 : 5) : 5, wz]);
       if (twoOnDoor) wins.push([doorFace, 9, wz]);
       if (type === 'cottage') { wins.push([doorFace, twoOnDoor ? 9 : 5, 15]); wins.push([other, 5, 15]); }
       if (extra) { wins.push([other, 5, wz + 10]); wins.push([doorFace, 5, wz + 10]); }
     }
-    var winName = tier === 3 ? 'win_glazed' : 'win_shutter', winMap = { MAIN: tier === 1 ? 'hide' : v.paint2, WOOD: tier === 3 ? 'pinewood' : 'oak' };
+    var winName = tier >= 3 ? 'win_glazed' : 'win_shutter', winMap = { MAIN: tier === 1 ? 'hide' : v.paint2, WOOD: tier >= 3 ? 'pinewood' : 'oak' };
     wins.forEach(function (wn, i) {
       var f = wn[0], a = snap(wn[1], f, 6), z = wn[2] + (spec.plinth && tier > 1 && wn[2] < 8 ? 1 : 0);
-      if (tier === 3 && i === 0 && type === 'basic_housing') {
+      if (tier >= 3 && i === 0 && type === 'basic_housing') {
         onFace(p, g, f, v.shutterPat, { MAIN: v.paint, ACCENT: v.paint2 }, snap(a - 4, f, 3), z);
         onFace(p, g, f, v.shutterPat, { MAIN: v.paint, ACCENT: v.paint2 }, snap(a + 6, f, 3), z);
       }
       onFace(p, g, f, winName, winMap, a, z);
-      if ((tier === 3 && (i === 0 || type === 'cottage')) || (v.acc.indexOf('flowerbox') >= 0 && i === 0))
+      if ((tier >= 3 && (i === 0 || type === 'cottage')) || (v.acc.indexOf('flowerbox') >= 0 && i === 0))
         faceStrip(p, g, f, 'flowerbox', { ACCENT: v.bloom, FOLIAGE: fol, MAIN: 'oak' }, a, 7, z - 1);
     });
     /* roof details */
@@ -241,7 +253,7 @@
       if (g.axis === 'x') { var C = P(-E, d / 2, H + rh), D = P(w + E, d / 2, H + rh); strip(p, 'hd_clay_ridge', rmap, C[0], D[0], function (xx) { return topEdge(C, 0.5)(xx) - 1; }, 0); }
       else { var C2 = P(w / 2, d + E, H + rh), D2 = P(w / 2, -E, H + rh); strip(p, 'hd_clay_ridge', rmap, C2[0], D2[0], function (xx) { return topEdge(C2, -0.5)(xx) - 1; }, 0); }
     }
-    if (spec.roof.type === 'gable' && tier >= 2 && (type === 'cottage' ? (tier === 3 || v.barge) : (tier === 3 && v.barge))) {
+    if (spec.roof.type === 'gable' && tier >= 2 && (type === 'cottage' ? (tier >= 3 || v.barge) : (tier >= 3 && v.barge))) {
       if (g.axis === 'y') {
         var Ap = P(w / 2, d + E, H + rh), L0 = P(-E, d + E, H), R0 = P(w + E, d + E, H);
         strip(p, 'hd_bargeboard', {}, L0[0] + 1, Ap[0], function (xx) { return lerpY(L0, Ap)(xx) + 1; }, 0);
@@ -265,13 +277,14 @@
     var chim = null;
     if (v.chimney) {
       var Q = g.axis === 'x' ? P(w * v.chimX, d / 2, H + rh) : P(w / 2, d * v.chimX, H + rh);
-      for (var cx = Q[0] - 2; cx <= Q[0] + 1; cx++) for (var cy = Q[1] - 7; cy <= Q[1] + 2; cy++) {
-        var c = x.texC('tex_drystone', cx, cy, 'river', cx < Q[0] ? 0 : 1);
+      var tc = tier === 4 ? 5 : 0;
+      for (var cx = Q[0] - 2; cx <= Q[0] + 1; cx++) for (var cy = Q[1] - 7 - tc; cy <= Q[1] + 2; cy++) {
+        var c = tc ? x.texC('tex_brick', cx, cy, 'ironbrick', cx < Q[0] ? 0 : 1) : x.texC('tex_drystone', cx, cy, 'river', cx < Q[0] ? 0 : 1);
         if (cx === Q[0] - 2) c = x.shift(c, 1); else if (cx === Q[0] + 1) c = x.darkest(c);
         p.set(cx, cy, c);
       }
-      p.blit(x.sprite('hd_chimney_cap'), Q[0] - 3, Q[1] - 10);
-      chim = [Q[0], Q[1] - 11];
+      p.blit(x.sprite('hd_chimney_cap'), Q[0] - 3, Q[1] - 10 - tc);
+      chim = [Q[0], Q[1] - 11 - tc];
     }
     /* accessories */
     var BLx = g.BL, BRx = g.BR, Ept = P(w, 0, 0);
@@ -538,7 +551,7 @@
 
   SK.village = { update: update, signature: signature, drawStatic: drawStatic, drawDynamic: drawDynamic, building: building, preview: preview,
     sheet: sheet, densitySheet: densitySheet, samples: samples, report: report, slots: slots, plan: plan, visN: visN, variant: variant,
-    tierOf: tierOf, CFG: CFG, COMPOSERS: COMPOSERS, DYN: DYN, bunt: bunt, vil: VIL, depth: function () { return DEPTH; }, idAt: idAt, drawActors: drawActors,
+    tierOf: tierOf, typeTier: typeTier, CFG: CFG, ORDER: ORDER, SECTORS: SECTORS, COMPOSERS: COMPOSERS, DYN: DYN, bunt: bunt, vil: VIL, depth: function () { return DEPTH; }, idAt: idAt, drawActors: drawActors,
     burst: burst, scaf: function () { return SCAF; }, trans: function () { return TRANS; }, signs: function () { return SIGNS; }, house: house,
     placed: function () { return Object.keys(PLACED).map(function (k) { return PLACED[k]; }); },
     H: { geo: geo, faceY: faceY, faceX: faceX, snap: snap, onFace: onFace, strip: strip, faceStrip: faceStrip, bottomEdge: bottomEdge, topEdge: topEdge,

@@ -78,7 +78,7 @@
     var c = C(type, tier, k, season, lvl), x = c.x, R = c.R, v = c.v, F = frame(2, 2, 72 + c.extra), p = F.p, metal = o.metal || 'iron', af = o.af | 0;
     ground(F, 0.05, 0.05, 1.95, 1.95, function () { return c.snow ? R('snow', 1) : R('ashen', 1); });
     if (!c.snow) B.chips(F, 0.1, 0.1, 1.9, 1.9, 'soot', 22, k + 5);
-    var gc = put(F, { w: 0.3, d: 0.3, h: 34 + c.extra, plinth: 2, wall: tier === 3 ? { tex: 'tex_brick', ramp: 'brick' } : { tex: 'tex_drystone', ramp: 'river' }, roof: { type: 'flat', ramp: 'soot' }, snow: c.snow }, 1.4, 0.12);
+    var gc = put(F, { w: 0.3, d: 0.3, h: 34 + c.extra, plinth: 2, wall: tier >= 3 ? { tex: 'tex_brick', ramp: 'brick' } : { tex: 'tex_drystone', ramp: 'river' }, roof: { type: 'flat', ramp: 'soot' }, snow: c.snow }, 1.4, 0.12);
     var top = gc.P(0.15, 0.15, gc.H);
     var spec = { w: 1.5, d: 1.05, h: 17 + v.dh + c.extra, plinth: tier === 2 ? 6 : 3,
       wall: wallFor(tier, v, { tex: 'tex_drystone', ramp: v.wi ? 'sandstone' : 'river' }, { tex: 'tex_planks', ramp: 'walnut' }, { tex: v.wi ? 'tex_cutstone' : 'tex_brick', ramp: v.wi ? 'sandstone' : 'brick' }),
@@ -95,7 +95,7 @@
     });
     var gl = [H.faceX(g, 'L', a0 + 4), H.faceY(g, 'L', a0 + 4) + 1];
     for (var q = -3; q <= 3; q++) p.set(gl[0] + q, gl[1] + (q > 0 ? 1 : 0), R('ember', af % 3 === 1 ? 2 : 3));
-    H.onFace(p, g, 'R', tier === 3 ? 'win_glazed' : 'win_shutter', { MAIN: v.paint2 }, H.snap(6, 'R', 6), 7);
+    H.onFace(p, g, 'R', tier >= 3 ? 'win_glazed' : 'win_shutter', { MAIN: v.paint2 }, H.snap(6, 'R', 6), 7);
     var an = F.Pg(0.7, 1.9); spr(p, 'sig_anvil', { METAL: metal, WOOD: 'walnut' }, an[0], an[1]);
     var rk = F.Pg(1.65, 1.85); post(p, [rk[0] - 8, rk[1] - 2], 7, 'walnut'); post(p, [rk[0] + 6, rk[1] + 1], 7, 'walnut');
     /* rack shows the crafted good with the most stock (city.foundry assignments), filled from resource stock */
@@ -107,19 +107,20 @@
   }
 
   function smelter(type, tier, k, season, lvl, o) {
-    var c = C(type, tier, k, season, lvl), x = c.x, R = c.R, v = c.v, F = frame(2, 2, 76 + c.extra), p = F.p, metal = o.metal || 'iron', af = o.af | 0;
+    var tall = !!(o.e2 && o.e2.indexOf('F') >= 0), xt = tall ? 14 : 0;
+    var c = C(type, tier, k, season, lvl), x = c.x, R = c.R, v = c.v, F = frame(2, 2, 76 + c.extra + xt), p = F.p, metal = o.metal || 'iron', af = o.af | 0;
     ground(F, 0.1, 0.1, 1.9, 1.9, function () { return c.snow ? R('snow', 1) : R('dirt', 2); });
     if (tier >= 2) {
-      var gs = put(F, { w: 0.6, d: 0.55, h: 11, plinth: tier === 3 ? 3 : 0, wall: tier === 3 ? { tex: 'tex_brick', ramp: 'brick' } : { tex: 'tex_planks', ramp: 'pinewood' },
+      var gs = put(F, { w: 0.6, d: 0.55, h: 11, plinth: tier >= 3 ? 3 : 0, wall: tier >= 3 ? { tex: 'tex_brick', ramp: 'brick' } : { tex: 'tex_planks', ramp: 'pinewood' },
         roof: { type: 'lean', axis: 'y', tex: c.m.roofTex, ramp: c.m.roofR }, snow: c.snow }, 1.3, 0.2);
       hutDoor(p, gs, 'L', c);
     }
-    var r = 12, h = 20 + v.dh + c.extra, ramp = tier === 3 ? 'brick' : (v.wi ? 'ochre' : 'terracotta');
+    var r = 12, h = 20 + v.dh + c.extra + xt, ramp = tier >= 3 ? (tier === 4 ? 'ironbrick' : 'brick') : (v.wi ? 'ochre' : 'terracotta'), glow = [];
     put(F, { w: 1.2, d: 1.2, h: h, shape: 'round', r: r, plinth: tier >= 2 ? 3 : 0, plinthRamp: 'river',
-      wall: { tex: tier === 3 ? 'tex_brick' : 'tex_wattle', ramp: ramp }, roof: { type: 'cone', tex: 'tex_wattle', ramp: ramp, H: 12 }, snow: c.snow }, 0.35, 0.35);
+      wall: { tex: tier >= 3 ? 'tex_brick' : 'tex_wattle', ramp: ramp }, roof: { type: 'cone', tex: 'tex_wattle', ramp: ramp, H: 12 }, snow: c.snow }, 0.35, 0.35);
     var cc = F.Pg(0.95, 0.95);
     ring(p, cc, r, round(h * 0.55), tier === 1 ? 'walnut' : metal);
-    if (tier === 3) ring(p, cc, r, 4, metal);
+    if (tier >= 3) ring(p, cc, r, 4, metal);
     var cz = h + 12 - 5;
     put(F, { w: 0.25, d: 0.25, h: 9, shape: 'round', r: 3, wall: { tex: 'tex_brick', ramp: tier === 1 ? 'terracotta' : 'brick' }, roof: { type: 'none' } }, 0.825, 0.825, cz);
     var ct = [cc[0], cc[1] - cz - 9];
@@ -131,10 +132,12 @@
       p.set(th[0] + i, th[1] + j, e ? R(ramp, 4) : (i === 0 && j === 0 ? R('ember', pulse) : R('ember', pulse + 1)));
     }
     if (tier >= 2) for (var q = 0; q < 6; q++) p.set(th[0] - 2 - q, th[1] + 4 + floor(q / 2), R('ember', q < 2 ? pulse + 1 : 3));
+    /* blast furnace (tech.smelting >= 3, era2.js): taller stack, cast-iron boiler door over the fire hole, glow animated by era2 */
+    if (tall) { spr(p, 'sig_boiler_door', { METAL: metal }, th[0], th[1] + 5); glow.push([th[0] - 2, th[1] - 1, 4]); }
     var mh = F.Pg(0.35, 1.7); mound(p, mh[0], mh[1], 8, 6, 'tex_drystone', metal === 'copper' ? 'copper' : 'rust', { cone: true, cap: c.snow ? ['snow', 1] : null });
     if (lvl >= 1 || (o.fq || 0) > 0.05) { var ms = F.Pg(1.6, 1.65); stack(p, ms[0], ms[1], 'unit_ingot', { MAIN: metal }, 2, 6, 3, o.fq == null ? 1 : Math.max(lvl ? 0.34 : 0, o.fq)); }
     if (v.acc.indexOf('lantern') >= 0) { var lp = F.Pg(1.75, 1.2); post(p, lp, 11, 'walnut'); p.blit(x.sprite('lantern', { ACCENT: v.paint }), lp[0] + 1, lp[1] - 10); }
-    return outS(F, { roof: ct, h: 34 + c.extra, smoke: smokeIf(o, lvl >= 2 ? [[ct[0], ct[1] - 1], [ct[0] - 1, ct[1] - 2]] : [[ct[0], ct[1] - 1]]), v: v });
+    return outS(F, { roof: ct, h: 34 + c.extra + xt, smoke: smokeIf(o, lvl >= 2 ? [[ct[0], ct[1] - 1], [ct[0] - 1, ct[1] - 2]] : [[ct[0], ct[1] - 1]]), v: v, e2glow: o.on === false ? [] : glow });
   }
 
   function cement_plant(type, tier, k, season, lvl, o) {
@@ -144,7 +147,7 @@
     var spec = { w: 0.85, d: 0.8, h: 17 + v.dh + c.extra, plinth: c.m.plinth, wall: wallFor(tier, v, { tex: 'tex_wattle', ramp: 'lime' }, c.m.wall, { tex: 'tex_brick', ramp: 'brick' }),
       roof: { type: 'gable', axis: 'y', tex: c.m.roofTex, ramp: c.m.roofR, pitch: 2 }, snow: c.snow };
     var g = put(F, spec, 0.12, 0.12); roofDetail(p, g); hutDoor(p, g, 'R', c);
-    H.onFace(p, g, 'L', tier === 3 ? 'win_glazed' : 'win_shutter', { MAIN: v.paint2 }, H.snap(5, 'L', 6), 6);
+    H.onFace(p, g, 'L', tier >= 3 ? 'win_glazed' : 'win_shutter', { MAIN: v.paint2 }, H.snap(5, 'L', 6), 6);
     var smoke = [];
     if (tier >= 2) smoke.push(chimney(p, g, ridgePt(g, 0.35)));
     var hp = F.Pg(1.3, 0.55); spr(p, 'sig_hopper', { MAIN: 'ashen', WOOD: 'pinewood' }, hp[0], hp[1]);
@@ -152,7 +155,7 @@
     var body = tier === 1 ? 'terracotta' : metal, hoop = tier === 1 ? 'walnut' : 'soot', zc = 8, rr = 4, u0 = 0.55, u1 = 1.85, vk = 1.3;
     [0.75, 1.25, 1.7].forEach(function (u) {
       var a = F.Pg(u, vk);
-      if (tier === 3) slab(F, u - 0.07, vk - 0.07, u + 0.07, vk + 0.07, zc - 3, 'river');
+      if (tier >= 3) slab(F, u - 0.07, vk - 0.07, u + 0.07, vk + 0.07, zc - 3, 'river');
       else { post(p, [a[0] - 3, a[1] - 1], zc - 3, 'walnut'); post(p, [a[0] + 2, a[1] + 1], zc - 3, 'walnut'); }
     });
     var A = F.Pg(u0, vk, zc), L = round((u1 - u0) * 16);
@@ -208,8 +211,8 @@
     var c = C(type, tier, k, season, lvl), x = c.x, R = c.R, v = c.v, F = frame(2, 1, 62 + c.extra), p = F.p, metal = o.metal || 'iron';
     var stone = v.wi ? 'sandstone' : 'river';
     var wall = wallFor(tier, v, { tex: 'tex_logs', ramp: 'oak' }, { tex: 'tex_planks', ramp: 'walnut' }, { tex: 'tex_cutstone', ramp: stone });
-    var spec = { w: 1.7, d: 0.7, h: 16 + v.dh + c.extra, plinth: 3, plinthTex: tier === 3 ? 'tex_cutstone' : undefined, plinthRamp: stone, wall: wall,
-      roof: tier === 3 ? { type: 'hip', tex: 'tex_tiles', ramp: c.m.roofR, pitch: 0 } : { type: 'gable', axis: 'x', tex: c.m.roofTex, ramp: c.m.roofR, pitch: 1 }, snow: c.snow };
+    var spec = { w: 1.7, d: 0.7, h: 16 + v.dh + c.extra, plinth: 3, plinthTex: tier >= 3 ? 'tex_cutstone' : undefined, plinthRamp: stone, wall: wall,
+      roof: tier >= 3 ? { type: 'hip', tex: 'tex_tiles', ramp: c.m.roofR, pitch: 0 } : { type: 'gable', axis: 'x', tex: c.m.roofTex, ramp: c.m.roofR, pitch: 1 }, snow: c.snow };
     var g = put(F, spec, 0.12, 0.15); roofDetail(p, g);
     var P = g.P, d = g.d, w = g.w, Hh = g.H, pr = tier === 1 ? 'oak' : tier === 2 ? 'walnut' : stone;
     if (tier >= 2) {
@@ -221,9 +224,9 @@
       var disc = P(w / 2, d + e, Hh + 3); p.set(disc[0], disc[1], R('gold', 1)); p.set(disc[0] + 1, disc[1], R('gold', 2));
     }
     var da = H.snap(round(w * 8) - 3, 'L', 6);
-    H.onFace(p, g, 'L', tier === 3 ? 'door_arched' : 'door_plain', { MAIN: tier === 1 ? 'oak' : v.paint, ACCENT: 'gold', METAL: 'gold' }, da, 0);
+    H.onFace(p, g, 'L', tier >= 3 ? 'door_arched' : 'door_plain', { MAIN: tier === 1 ? 'oak' : v.paint, ACCENT: 'gold', METAL: 'gold' }, da, 0);
     var wa = H.snap(4, 'L', 6);
-    H.onFace(p, g, 'L', 'win_glazed', { WOOD: tier === 3 ? 'walnut' : 'oak' }, wa, 6);
+    H.onFace(p, g, 'L', 'win_glazed', { WOOD: tier >= 3 ? 'walnut' : 'oak' }, wa, 6);
     for (var b = 1; b <= 4; b += 3) { var bx = H.faceX(g, 'L', wa + b), by = H.faceY(g, 'L', wa + b) - 6; for (var q = 1; q <= 5; q++) p.set(bx, by - q, R(metal, 2)); }
     H.onFace(p, g, 'R', 'win_glazed', { WOOD: 'walnut' }, H.snap(3, 'R', 6), 6);
     [0.55, w - 0.42].forEach(function (u) { var cp = P(u, d + 0.14, 0); spr(p, 'column', { MAIN: pr }, cp[0], cp[1] + 1); });
@@ -232,7 +235,7 @@
     var mq = o.fq == null ? 0.6 : o.fq; if (mq > 0.05) { var cs = P(w - 0.2, d + 0.3, 0); stack(p, cs[0], cs[1], 'unit_coin', {}, 3, 6, 3, mq); }
     var sc = P(w, d, Hh - 2); hangSign(p, sc[0] + 1, sc[1], 1, 'ic_coin', { MAIN: 'gold' });
     if (v.acc.length && tier >= 2) { var pp = P(0.1, d + 0.12, 0); spr(p, 'pot_flowers', { ACCENT: v.bloom, FOLIAGE: c.fol }, pp[0], pp[1]); }
-    return outS(F, { roof: tier === 3 ? P(w / 2, d / 2, Hh + g.rh) : ridgePt(g, 0.5), h: 24 + c.extra, v: v });
+    return outS(F, { roof: tier >= 3 ? P(w / 2, d / 2, Hh + g.rh) : ridgePt(g, 0.5), h: 24 + c.extra, v: v });
   }
 
   /* ---------- KNOWLEDGE ---------- */
@@ -242,7 +245,7 @@
     var spec = { w: 1.7, d: 0.7, h: 17 + v.dh + c.extra, plinth: c.m.plinth, wall: wall, roof: { type: 'gable', axis: 'x', tex: c.m.roofTex, ramp: c.m.roofR, pitch: 3 }, snow: c.snow };
     if (lvl >= 1) put(F, { w: 0.5, d: 0.45, h: 10, plinth: c.m.plinth ? 2 : 0, wall: wall, roof: { type: 'lean', axis: 'y', tex: c.m.roofTex, ramp: c.m.roofR }, snow: c.snow }, -0.32, 0.4);
     var g = put(F, spec, 0.12, 0.15); roofDetail(p, g);
-    var fr = tier === 3 ? 'walnut' : 'oak', hh = tier === 1 ? 7 : 10, zw = (c.m.plinth || 1) + 1;
+    var fr = tier >= 3 ? 'walnut' : 'oak', hh = tier === 1 ? 7 : 10, zw = (c.m.plinth || 1) + 1;
     [3, 10, 17].forEach(function (a, i) { archWin(p, g, 'L', H.snap(a, 'L', 4), tier === 1 ? 4 : 5, hh, zw, fr, (i + k) % 3 !== 2); });
     if (c.extra) [3, 10, 17].forEach(function (a) { archWin(p, g, 'L', H.snap(a, 'L', 4), 5, 6, zw + 12, fr, true); });
     H.onFace(p, g, 'L', 'flowerbox', { ACCENT: v.bloom, FOLIAGE: c.fol }, H.snap(23, 'L', 6), zw + 1);
@@ -259,14 +262,14 @@
     var c = C(type, tier, k, season, lvl), x = c.x, R = c.R, v = c.v, F = frame(2, 2, 84 + c.extra), p = F.p;
     var wall = wallFor(tier, v, { tex: 'tex_logs', ramp: 'oak' }, { tex: 'tex_planks', ramp: 'pinewood' }, { tex: 'tex_cutstone', ramp: v.wi ? 'river' : 'sandstone' });
     var spec = { w: 1.7, d: 1.25, h: 21 + c.extra, plinth: 3, wall: wall, roof: { type: 'hip', tex: c.m.roofTex, ramp: c.m.roofR, pitch: 1 }, snow: c.snow };
-    if (tier >= 2) { spec.wall2 = { tex: 'hd_halftimber', ramp: tier === 3 ? 'lime' : 'cream', z: 11, map: { WOOD: 'walnut' } }; spec.bandRamp = 'walnut'; }
+    if (tier >= 2) { spec.wall2 = { tex: 'hd_halftimber', ramp: tier >= 3 ? 'lime' : 'cream', z: 11, map: { WOOD: 'walnut' } }; spec.bandRamp = 'walnut'; }
     var g = put(F, spec, 0.15, 0.4);
     var flagR = [v.paint, v.paint2];
     [[0.12, g.d], [g.w - 0.1, g.d]].forEach(function (q, i) { var fp = g.P(q[0], q[1], g.H); spr(p, 'flag', { ACCENT: flagR[i] }, fp[0], fp[1] + 1, { flip: i === 1 }); });
-    var winN = tier === 3 ? 'win_glazed' : 'win_shutter', wm = { MAIN: v.paint2, WOOD: 'walnut' };
+    var winN = tier >= 3 ? 'win_glazed' : 'win_shutter', wm = { MAIN: v.paint2, WOOD: 'walnut' };
     [3, 21].forEach(function (a) { H.onFace(p, g, 'L', winN, wm, H.snap(a, 'L', 6), 5); H.onFace(p, g, 'L', winN, wm, H.snap(a, 'L', 6), 14); });
     [4, 13].forEach(function (a) { H.onFace(p, g, 'R', winN, wm, H.snap(a, 'R', 6), 5); H.onFace(p, g, 'R', winN, wm, H.snap(a, 'R', 6), 14); });
-    if (v.ivy || tier === 3) H.onFace(p, g, 'L', 'hd_ivy', { FOLIAGE: season === 3 ? 'frost' : 'conifer', ACCENT: v.bloom }, 1, 3);
+    if (v.ivy || tier >= 3) H.onFace(p, g, 'L', 'hd_ivy', { FOLIAGE: season === 3 ? 'frost' : 'conifer', ACCENT: v.bloom }, 1, 3);
     var ts = { w: 0.5, d: 0.5, h: 31 + c.extra, plinth: 3, wall: wall, roof: { type: 'hip', tex: c.m.roofTex, ramp: c.m.roofR, pitch: 5 }, snow: c.snow };
     if (tier >= 2) { ts.wall2 = spec.wall2; ts.bandRamp = 'walnut'; }
     var gt = put(F, ts, 0.75, 1.42);
@@ -347,7 +350,7 @@
         p.set(x0, y0 - hh, R(wr, 0)); if (j === hh) p.set(x0 + 1, y0 - hh, R(wr, 2));
         p.set(x0, y0 - hh - 1, R(wr, 1));
         p.set(x0, y0 - 6, R('straw', 3)); p.set(x0 + 1, y0 - 6, R('straw', 4));
-        if (tier === 3) { p.set(x0, y0 + 1, R('river', 1)); p.set(x0 + 1, y0 + 1, R('river', 2)); p.set(x0, y0, R('river', 1)); p.set(x0 + 1, y0, R('river', 3)); }
+        if (tier >= 3) { p.set(x0, y0 + 1, R('river', 1)); p.set(x0 + 1, y0 + 1, R('river', 2)); p.set(x0, y0, R('river', 1)); p.set(x0 + 1, y0, R('river', 3)); }
       }
     }
     stakes([0.05, 0.95], [0.05, 0.05]); stakes([0.05, 0.05], [1.95, 0.05]);
@@ -371,7 +374,7 @@
   function hospital(type, tier, k, season, lvl, o) {
     var c = C(type, tier, k, season, lvl), x = c.x, R = c.R, v = c.v, F = frame(2, 1, 56 + c.extra), p = F.p, Pg = F.Pg;
     var wall = wallFor(tier, v, { tex: 'tex_wattle', ramp: 'lime' }, { tex: 'tex_wattle', ramp: v.wi ? 'cream' : 'lime' }, { tex: 'tex_wattle', ramp: v.wi ? 'rosewash' : 'lime' });
-    var spec = { w: 1.35, d: 0.65, h: 14 + v.dh + c.extra, plinth: tier === 1 ? 0 : 3, plinthTex: tier === 3 ? 'tex_brick' : undefined, plinthRamp: tier === 3 ? 'brick' : 'river',
+    var spec = { w: 1.35, d: 0.65, h: 14 + v.dh + c.extra, plinth: tier === 1 ? 0 : 3, plinthTex: tier >= 3 ? 'tex_brick' : undefined, plinthRamp: tier >= 3 ? 'brick' : 'river',
       wall: wall, roof: { type: 'gable', axis: 'x', tex: c.m.roofTex, ramp: c.m.roofR, pitch: 2 }, snow: c.snow };
     var g = put(F, spec, 0.1, 0.15); roofDetail(p, g);
     var da = H.snap(13, 'L', 6), z0 = 0;
@@ -383,7 +386,7 @@
       return j > 5 && i === 1 ? R('ember', 2) : x.pal().ink;
     });
     for (var j = 0; j < 9; j++) { p.set(H.faceX(g, 'L', da) - 1, H.faceY(g, 'L', da) - j, R(tier === 1 ? 'oak' : v.paint, 1)); p.set(H.faceX(g, 'L', da) - 2, H.faceY(g, 'L', da) - j, R(tier === 1 ? 'oak' : v.paint, 2)); }
-    var winN = tier === 3 ? 'win_glazed' : 'win_shutter';
+    var winN = tier >= 3 ? 'win_glazed' : 'win_shutter';
     H.onFace(p, g, 'L', winN, { MAIN: v.paint2 }, H.snap(4, 'L', 6), 6);
     H.onFace(p, g, 'R', winN, { MAIN: v.paint2 }, H.snap(3, 'R', 6), 6);
     p.blit(x.sprite('herb_bundle'), H.faceX(g, 'R', 8), H.faceY(g, 'R', 8) - g.H + 2);

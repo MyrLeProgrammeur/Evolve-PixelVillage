@@ -76,11 +76,11 @@
     LOOKS.set(key, L); return L;
   }
   /* tool metals from the real tool techs: pickaxe / hammer / hoe 1 bronze, 2 iron, 3 steel (0 = stone);
-     axe 1 stone, 2 copper, 3 iron (unchanged). tech.mining no longer drives the pick (mining 4 = coal, not steel). */
+     axe 1 stone, 2 copper, 3 iron, 4+ steel (tech.axe 4 = steel axes). tech.mining no longer drives the pick (mining 4 = coal, not steel). */
   function tierM(lv, base) { lv = lv | 0; return lv >= 3 ? 'steel' : lv === 2 ? 'iron' : lv === 1 ? 'bronze' : base; }
   function metals(o) {
-    o = o || {}; var ax = Math.max(1, Math.min(3, o.axe | 0 || 1)), mi = o.mining | 0, ar = o.armor | 0;
-    return { axe: ['slate', 'copper', 'iron'][ax - 1], pick: tierM(o.pickaxe, 'slate'), hammer: tierM(o.hammer, 'river'), hoe: tierM(o.hoe, 'slate'),
+    o = o || {}; var ax = Math.max(1, Math.min(4, o.axe | 0 || 1)), mi = o.mining | 0, ar = o.armor | 0;
+    return { axe: ['slate', 'copper', 'iron', 'steel'][ax - 1], pick: tierM(o.pickaxe, 'slate'), hammer: tierM(o.hammer, 'river'), hoe: tierM(o.hoe, 'slate'),
       tool: mi >= 3 ? 'iron' : mi >= 2 ? 'copper' : 'slate', helm: ar >= 2 ? 'iron' : 'bronze', bow: (o.military | 0) >= 1, armor: ar };
   }
   function toolMap(t, M, L, J, o) {
@@ -116,6 +116,8 @@
       case 'hat_helmet': return { METAL: M.helm, ACCENT: 'madder' };
       case 'hat_fur': return { MAIN: L.coat === 'walnut' ? 'hide' : 'walnut', ACCENT: 'cream' };
       case 'fl_rain_hood': return { MAIN: L.cloth === 'saffron' ? 'teal' : 'saffron', ACCENT: 'walnut' };
+      case 'hat_flatcap': return { MAIN: ['driftwood', 'hide', 'sage', 'walnut'][L.skin.length % 4], ACCENT: L.cloth };
+      case 'hat_fedora': return { MAIN: 'walnut', ACCENT: 'soot' };
     }
     return {};
   }
@@ -124,11 +126,12 @@
 
   /* mode: idle | walk | work | guard | sit ; f: frame index
      o: { back, axe, pickaxe, hammer, hoe, mining, military, armor, wx ('w' winter, 'r' rain), famine, wound, carry, banner, merc, tool } */
+  /* o.e2 (Era 2 layers, era2.js): c flat cap, o overalls, j jackhammer for the pick, k carries a cable coil, f fedora, s trench coat */
   var CACHE = new Map();
   function compose(job, seed, mode, f, o) {
     o = o || {}; f = f & 3;
-    var M = metals(o), back = !!o.back, wx = o.wx || '', winter = wx.indexOf('w') >= 0, rain = wx.indexOf('r') >= 0;
-    var key = [job, seed, mode, f, back ? 1 : 0, M.axe, M.pick, M.hammer, M.hoe, M.tool, M.helm, M.bow ? 1 : 0, M.armor, wx, o.famine ? 1 : 0, o.wound ? 1 : 0, o.carry || '', o.banner || '', o.merc ? 1 : 0, o.tool || ''].join('|');
+    var M = metals(o), back = !!o.back, wx = o.wx || '', winter = wx.indexOf('w') >= 0, rain = wx.indexOf('r') >= 0, e2 = o.e2 || '';
+    var key = [job, seed, mode, f, back ? 1 : 0, M.axe, M.pick, M.hammer, M.hoe, M.tool, M.helm, M.bow ? 1 : 0, M.armor, wx, o.famine ? 1 : 0, o.wound ? 1 : 0, o.carry || '', o.banner || '', o.merc ? 1 : 0, o.tool || '', e2].join('|');
     var hit = CACHE.get(key); if (hit) return hit;
     if (CACHE.size > 4000) CACHE.clear();
     var J = JOB[job], A = ARCH[o.merc ? 'merc' : J.a], L = look(job, seed), robe = A.body === 'robe', p = new Pix(CW, CHh), sh = J.soot ? 1 : 0;
@@ -149,6 +152,7 @@
     else { U = f & 1; if (o.famine && !soldier) arm = 'arm_belly'; }
     if (back) arm = 'arm_neutral';
     var tool = o.tool || J.tool, shield = J.shield && !o.merc;
+    if (tool === 'tool_pick' && e2.indexOf('j') >= 0 && P.tool_jackhammer) { tool = 'tool_jackhammer'; if (mode === 'work') { arm = 'arm_hands_a'; rot = 0; U = 0; } }
     if (soldier && tool === 'tool_spear' && M.bow) { tool = 'tool_bow'; shield = false; }
     if (sit || (arm === 'arm_belly')) tool = null;
     if (mode === 'walk' && o.carry && CARRY[o.carry]) tool = null;
@@ -156,8 +160,10 @@
     var mT = robe ? { MAIN: torsoMain, ACCENT: A.trim } : { MAIN: torsoMain, ACCENT: A.belt, SKIN: skin };
     var mA = { MAIN: winter ? coatR : A.outfit, ACCENT: winter ? coatR : (A.rolled ? skin : A.outfit), SKIN: skin, WOOD: 'cream' };
     var mL = robe ? { MAIN: A.outfit, ACCENT: A.trim, WOOD: 'walnut' } : { MAIN: A.trous, WOOD: 'walnut' };
-    var tm = tool ? toolMap(tool, M, L, J, o) : null, hand = P[arm].attach.hand, sop = sh ? { shade: sh } : null;
+    var tm = tool ? (tool === 'tool_jackhammer' ? { METAL: M.pick === 'steel' ? 'steel' : 'iron' } : toolMap(tool, M, L, J, o)) : null, hand = P[arm].attach.hand, sop = sh ? { shade: sh } : null;
     var hat = L.hat;
+    if (e2.indexOf('c') >= 0 && P.hat_flatcap && !KEEP_HAT[hat]) hat = 'hat_flatcap';
+    if (e2.indexOf('f') >= 0 && P.hat_fedora) hat = 'hat_fedora';
     if (o.merc) hat = 'hat_fur';
     if (winter && !KEEP_HAT[hat]) hat = 'hat_fur';
     if (rain && !(hat === 'hat_helmet' || hat === 'hat_miner_lamp')) hat = 'fl_rain_hood';
@@ -169,8 +175,12 @@
       p.blit(X.sprite(mode === 'walk' && (f & 1) ? 'cart_wheel_b' : 'cart_wheel_a', { WOOD: 'walnut' }), cx + 1, OY + 19);
     }
     if (back && tool) hold(tool, tm, 12, 15 + U, 0, flick);
+    var overalls = e2.indexOf('o') >= 0 && P.cloth_overalls, trench = e2.indexOf('s') >= 0 && P.cloth_trenchcoat;
+    if (overalls && !robe) mL = { MAIN: 'indigo', WOOD: 'walnut' };
     if (robe && !sit) lay(hem, mL, bx, 0, sop); else lay(legs, mL, bx, 0, sop);
     lay(back ? (robe ? 'back_torso_robe' : 'back_torso_tunic') : (robe ? 'torso_robe' : 'torso_tunic'), mT, 0, U, sop);
+    if (!back && overalls && !winter) lay('cloth_overalls', { MAIN: 'indigo', ACCENT: L.cloth === 'indigo' ? 'madder' : L.cloth }, 0, U, sop);
+    if (!back && trench) lay('cloth_trenchcoat', { MAIN: 'hide', ACCENT: 'walnut' }, 0, U);
     if (!back) {
       if (winter) lay('fl_winter_coat', { MAIN: coatR, ACCENT: 'cream' }, 0, U);
       else {
@@ -184,6 +194,7 @@
     }
     lay(back ? 'back_arm' : arm, mA, adx, U, sop);
     if (!back && mode === 'walk' && o.carry && CARRY[o.carry]) { var cu = CARRY[o.carry]; p.blit(X.sprite(cu[0], cu[1]), OX + hand[0] - 5 + adx, OY + hand[1] - 6 + U); }
+    else if (!back && mode === 'walk' && e2.indexOf('k') >= 0 && P.unit_cable) p.blit(X.sprite('unit_cable'), OX + hand[0] - 5 + adx, OY + hand[1] - 6 + U);
     if (!back && (soldier || o.merc) && M.armor >= 2) lay('fl_plate', { METAL: M.helm }, 0, U);
     if (!back && !winter && L.fl === 'fl_shoulder_bag') lay('fl_shoulder_bag', { MAIN: 'hide', ACCENT: L.cloth }, 0, U);
     lay(back ? 'back_head' : 'head_front', { SKIN: skin }, 0, U);
@@ -362,8 +373,9 @@
     LAST = [];
     arr.forEach(function (s) {
       var c = s.c, opts = Object.assign({ back: s.back, wx: wx, famine: fam && c.J.a !== 'soldier' && c.J.a !== 'raider', carry: s.mode === 'walk' ? c.carry : null }, mo, c.o);
+      if (SK.citE2) opts.e2 = SK.citE2(c, st, s);
       var pix = compose(c.job, c.i, s.mode, s.f, opts);
-      var g = X.worldPt(s.u, s.v), gx = round(g[0] * K), gy = round(g[1] * K), ox = gx - AX, oy = gy - AY, d = s.d;
+      var g = X.worldPt(s.u, s.v), gx = round(g[0] * K), gy = round(g[1] * K), ox = gx - AX + (opts.e2 && opts.e2.indexOf('j') >= 0 && s.mode === 'work' ? (floor(t / 83) & 1) : 0), oy = gy - AY, d = s.d;
       LAST.push({ x: gx, y: gy, job: c.job });
       for (var k = -3; k <= 2; k++) { var qx = gx + k, qy = gy + 1; if (qx < 0 || qy < 0 || qx >= W || qy >= H) continue; var q = qy * W + qx; if (dep(qx, qy) <= d) b.d[q] = X.shift(b.d[q], 1); }
       for (var j = 0; j < CHh; j++) { var ty = oy + j; if (ty < 0 || ty >= H) continue;
@@ -439,6 +451,6 @@
   VL.samples = function () { return (baseSamples ? baseSamples() : []).concat(samples()); };
 
   SK.citizens = { update: update, draw: draw, compose: compose, strip: strip, lineup: lineup, states: states, STATES: STATES, heads: heads, look: look, JOB: JOB, ARCH: ARCH, wN: wN, metals: metals,
-    GOV_COL: GOV_COL, list: function () { return ST.list; }, last: function () { return LAST; } };
+    GOV_COL: GOV_COL, list: function () { return ST.list; }, last: function () { return LAST; }, route: route, AX: AX, AY: AY, CW: CW, CH: CHh };
   }
 })(window);

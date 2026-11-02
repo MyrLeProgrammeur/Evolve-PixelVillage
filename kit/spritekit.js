@@ -156,8 +156,9 @@
   ].map(function (b) { return { key: b[0], name: b[1], sector: b[2], fw: b[3], fd: b[4], h: b[5] }; });
   var JOBS = ['unemployed', 'forager', 'farmer', 'hunter', 'lumberjack', 'quarry_worker', 'miner', 'coal_miner', 'cement_worker', 'craftsman', 'teamster', 'professor', 'scientist', 'priest', 'banker', 'entertainer', 'soldier', 'scavenger'];
   var RESOURCES = ['Food', 'Lumber', 'Stone', 'Furs', 'Copper', 'Iron', 'Cement', 'Coal', 'Steel', 'Money', 'Knowledge', 'Plywood', 'Brick', 'Wrought_Iron', 'Sheet_Metal', 'Aluminium'];
-  /* 169 pieces of batches 1-7, 53 of batch 8 (Era 1 audit follow-up), 45 of batch 9 (Era 0: cell, organism, scenery, fx) */
-  var EXPECTED = { texture: 9, module: 21, signature: 19, hero: 13, citizen: 73, decor: 27, animal: 14, icon: 18, unit: 11, effect: 10, 'interface': 7, cell: 13, organism: 18, scenery: 8, fx: 6 };
+  /* 169 pieces of batches 1-7, 53 of batch 8 (Era 1 audit follow-up), 45 of batch 9 (Era 0: cell, organism, scenery, fx),
+     30 of batch 10 (Era 2: 3 textures, 6 modules, 10 signatures, 5 citizen layers, 3 sparks, 1 icon, 2 units) */
+  var EXPECTED = { texture: 12, module: 27, signature: 29, hero: 13, citizen: 78, decor: 27, animal: 14, icon: 19, unit: 13, effect: 13, 'interface': 7, cell: 13, organism: 18, scenery: 8, fx: 6 };
   var ERA0 = { cell: 1, organism: 1, scenery: 1, fx: 1 };
   var BASE = { texture: 9, module: 19, signature: 18, hero: 12, citizen: 58, decor: 17, animal: 10, icon: 12, unit: 6, effect: 3, 'interface': 5 };
 
@@ -174,6 +175,8 @@
     else if (rf.type === 'hip') rh = 4 * Math.min(w, d) + 1 + (rf.pitch || 0);
     else if (rf.type === 'lean') rh = 4 * (rf.axis === 'y' ? w : d);
     else if (rf.type === 'cone' || rf.type === 'dome') rh = rf.H || 14;
+    else if (rf.type === 'gambrel') rh = 5 * (rf.axis === 'y' ? w : d) + 2 + (rf.pitch || 0);
+    else if (rf.type === 'sawtooth') rh = (rf.H || 4) + 1;
     var top = Math.ceil(H + rh + 6), W = Math.ceil(16 * (w + d)) + 12, Ht = Math.ceil(top + 8 * (w + d) + 3);
     var p = new Pix(W, Ht), ox = Math.round(16 * d + 6), oy = top;
     function P(x, y, z) { return [ox + (x - y) * 16, oy + (x + y) * 8 - z]; }
@@ -219,6 +222,10 @@
       var t1 = rf.type, ax = rf.axis === 'y';
       if (t1 === 'gable' && !ax) fillPoly(p, [P(-e, -e, H), P(w + e, -e, H), P(w + e, d / 2, H + rh), P(-e, d / 2, H + rh)], roofSh('x', 1));
       if (t1 === 'gable' && ax) fillPoly(p, [P(-e, -e, H), P(-e, d + e, H), P(w / 2, d + e, H + rh), P(w / 2, -e, H + rh)], roofSh('y', 1));
+      /* gambrel (barn): steep lower slope, shallow upper slope, knee at 22 % of the span and 60 % of the rise */
+      var gk = 0.22, gz = Math.round(rh * 0.6), rk = function () { return rakeC; };
+      if (t1 === 'gambrel' && !ax) { fillPoly(p, [P(-e, -e, H), P(w + e, -e, H), P(w + e, d * gk, H + gz), P(-e, d * gk, H + gz)], roofSh('x', 1)); fillPoly(p, [P(-e, d * gk, H + gz), P(w + e, d * gk, H + gz), P(w + e, d / 2, H + rh), P(-e, d / 2, H + rh)], roofSh('x', 1)); }
+      if (t1 === 'gambrel' && ax) { fillPoly(p, [P(-e, -e, H), P(-e, d + e, H), P(w * gk, d + e, H + gz), P(w * gk, -e, H + gz)], roofSh('y', 1)); fillPoly(p, [P(w * gk, -e, H + gz), P(w * gk, d + e, H + gz), P(w / 2, d + e, H + rh), P(w / 2, -e, H + rh)], roofSh('y', 1)); }
       fillPoly(p, [P(0, d, 0), P(w, d, 0), P(w, d, H), P(0, d, H)], shL);
       fillPoly(p, [P(w, d, 0), P(w, 0, 0), P(w, 0, H), P(w, d, H)], shR);
       if (t1 === 'gable' && !ax) {
@@ -251,6 +258,37 @@
         } else {
           fillPoly(p, [P(0, d, H), P(w, d, H), P(0, d, H + rh - 1)], shL);
           fillPoly(p, [P(w + e, -e, H), P(w + e, d + e, H), P(-e, d + e, H + rh), P(-e, -e, H + rh)], roofSh('y', 1));
+        }
+      } else if (t1 === 'gambrel' && !ax) {
+        var k1 = d * gk, k2 = d - d * gk;
+        fillPoly(p, [P(w + e, d + e, H), P(w + e, k2, H + gz), P(w + e, d / 2, H + rh), P(w + e, k1, H + gz), P(w + e, -e, H)], rk);
+        fillPoly(p, [P(w, d, H), P(w, k2, H + gz - 1), P(w, d / 2, H + rh - 1), P(w, k1, H + gz - 1), P(w, 0, H)], shR);
+        fillPoly(p, [P(-e, d / 2, H + rh), P(w + e, d / 2, H + rh), P(w + e, k2, H + gz), P(-e, k2, H + gz)], roofSh('x', 0));
+        fillPoly(p, [P(-e, k2, H + gz), P(w + e, k2, H + gz), P(w + e, d + e, H), P(-e, d + e, H)], roofSh('x', 1));
+        rake(P(w + e, d + e, H), P(w + e, k2, H + gz)); rake(P(w + e, k2, H + gz), P(w + e, d / 2, H + rh)); rake(P(-e, k2, H + gz), P(w + e, k2, H + gz));
+      } else if (t1 === 'gambrel' && ax) {
+        var j1 = w * gk, j2 = w - w * gk;
+        fillPoly(p, [P(-e, d + e, H), P(j1, d + e, H + gz), P(w / 2, d + e, H + rh), P(j2, d + e, H + gz), P(w + e, d + e, H)], rk);
+        fillPoly(p, [P(0, d, H), P(j1, d, H + gz - 1), P(w / 2, d, H + rh - 1), P(j2, d, H + gz - 1), P(w, d, H)], shL);
+        fillPoly(p, [P(w / 2, -e, H + rh), P(w / 2, d + e, H + rh), P(j2, d + e, H + gz), P(j2, -e, H + gz)], roofSh('y', 1));
+        fillPoly(p, [P(j2, -e, H + gz), P(j2, d + e, H + gz), P(w + e, d + e, H), P(w + e, -e, H)], roofSh('y', 2));
+        rake(P(-e, d + e, H), P(j1, d + e, H + gz)); rake(P(j1, d + e, H + gz), P(w / 2, d + e, H + rh)); rake(P(w / 2, d + e, H + rh), P(j2, d + e, H + gz)); rake(P(j2, d + e, H + gz), P(w + e, d + e, H));
+        rake(P(j2, -e, H + gz), P(j2, d + e, H + gz));
+      } else if (t1 === 'sawtooth') {
+        /* north-light teeth: a corrugated slope rising toward the viewer, then a vertical glazed face (tex_glasspane) */
+        var th = rh - 1, gt = rf.glass || 'tex_glasspane', gr = rf.glassRamp || 'glass', glz = function (off) { return function (px, py) { return texC(gt, px - ox, py, gr, off); }; };
+        if (!ax) { var nT = rf.n || Math.max(2, Math.round(w / 0.7)), LT = w / nT;
+          for (var ti = 0; ti < nT; ti++) { var x0 = ti * LT, x1 = (ti + 1) * LT;
+            fillPoly(p, [P(x0, -e, H), P(x0, d + e, H), P(x1, d + e, H + th), P(x1, -e, H + th)], roofSh('y', 0));
+            fillPoly(p, [P(x0, d, H), P(x1, d, H), P(x1, d, H + th)], shL);
+            fillPoly(p, [P(x1, -e, H + th), P(x1, d + e, H + th), P(x1, d + e, H), P(x1, -e, H)], glz(1));
+            rake(P(x0, d + e, H), P(x1, d + e, H + th)); }
+        } else { var nY = rf.n || Math.max(2, Math.round(d / 0.7)), LY = d / nY;
+          for (var tj = 0; tj < nY; tj++) { var y0s = tj * LY, y1s = (tj + 1) * LY;
+            fillPoly(p, [P(-e, y0s, H), P(w + e, y0s, H), P(w + e, y1s, H + th), P(-e, y1s, H + th)], roofSh('x', 1));
+            fillPoly(p, [P(w, y0s, H), P(w, y1s, H), P(w, y1s, H + th)], shR);
+            fillPoly(p, [P(-e, y1s, H + th), P(w + e, y1s, H + th), P(w + e, y1s, H), P(-e, y1s, H)], glz(0));
+            rake(P(w + e, y0s, H), P(w + e, y1s, H + th)); }
         }
       } else if (t1 === 'flat') {
         var fr = rf.ramp || wr, ins = 0.1875;
@@ -292,7 +330,7 @@
   }
 
   /* ---------- terrain ---------- */
-  var MAPN = 24, WW = 832, WH = 600, NX = 416, NY = 176;
+  var MAPN = 24, WW = 832, WH = 600, NX = 416, NY = 176, HZ = NY - 28;
   function worldPt(x, y) { return [NX + (x - y) * 16, NY + (x + y) * 8]; }
   var LAYOUT = null;
   /* tile types: 1 grass, 2 path, 3 plaza, 4 water, 5 rock, 6 bare earth */
@@ -318,11 +356,12 @@
   }
   function tri(t) { t -= Math.floor(t); return 1 - Math.abs(t * 2 - 1); }
   function hump(t) { return 0.5 - 0.5 * Math.cos(t * Math.PI * 2); }
-  function hills(p, winter) {
+  function hills(p, winter, sur) {
     var Ls = [
       { base: NY + 112, amp: 74, f: [1 / 97, 1 / 41], fn: tri, col: winter ? R('snow', 1) : R('haze', 1), cap: true },
       { base: NY + 150, amp: 44, f: [1 / 83, 1 / 31], fn: hump, col: winter ? R('snow', 2) : R('haze', 2) },
       { base: NY + 182, amp: 26, f: [1 / 61, 1 / 23], fn: hump, col: winter ? R('snow', 3) : R('haze', 3) }];
+    if (sur) [[64, 2], [38, 4], [20, 6]].forEach(function (a, i) { Ls[i].amp = a[0]; Ls[i].base = HZ + a[1]; });
     Ls.forEach(function (L, li) {
       for (var x = 0; x < WW; x++) {
         var hg = Math.round(L.amp * (0.62 * L.fn(x * L.f[0] + li * 0.37) + 0.38 * L.fn(x * L.f[1] + li * 1.3))), top = L.base - hg;
@@ -337,34 +376,63 @@
   };
   var FLOWERS = ['rose', 'saffron', 'cream', 'plum', 'indigo', 'madder'];
   var TERR = new Map();
+  /* ---------- surroundings: the land carries on past the 24×24 map (OPT.surround 'open' | 'wooded'; 'off' = old floating plateau) ---------- */
+  var EXITS = null, RIVERS = [[[23.5, 14.6], [26.5, 14.0], [29, 15.2], [32, 14.4], [36, 15.6], [44, 15]], [[19.4, 23.5], [19.9, 26.5], [18.6, 29], [19.6, 32], [18.8, 36], [20, 44]]];
+  function exits() {
+    if (EXITS) return EXITS; var t = layout(), N = MAPN, e = [];
+    [['x', 1], ['x', -1], ['y', 1], ['y', -1]].forEach(function (s) {
+      var edge = s[1] > 0 ? N - 1 : 0, sum = 0, n = 0;
+      for (var k = 0; k < N; k++) { var q = s[0] === 'x' ? k * N + edge : edge * N + k; if (t[q] === 2) { sum += k + 0.5; n++; } }
+      if (n) e.push({ ax: s[0], s: s[1], c: sum / n });
+    });
+    return (EXITS = e);
+  }
+  function segD(x, y, a, b) { var dx = b[0] - a[0], dy = b[1] - a[1], t = clamp(((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy), 0, 1); return Math.hypot(x - a[0] - dx * t, y - a[1] - dy * t); }
+  function outerD(fx, fy) { return Math.max(fx < 0 ? -fx : fx > MAPN ? fx - MAPN : 0, fy < 0 ? -fy : fy > MAPN ? fy - MAPN : 0); }
+  function pxD(px, py) { var rx = px + 0.5 - NX, ry = py + 0.5 - NY; return outerD((rx / 16 + ry / 8) / 2, (ry / 8 - rx / 16) / 2); }
+  /* outer tile types: 1 meadow, 2 track, 4 river, 5 rock, 7 woodland (floor + canopy), 8/9 crop strips (two axes), 10 ploughed */
+  function outerTile(fx, fy, sur) {
+    sur = sur || OPT.surround || 'open'; if (sur === 'off') return 0;
+    var N = MAPN, d = outerD(fx, fy), i, k;
+    for (i = 0; i < RIVERS.length; i++) for (k = 0; k + 1 < RIVERS[i].length; k++) if (segD(fx, fy, RIVERS[i][k], RIVERS[i][k + 1]) < 0.55) return 4;
+    var E = exits();
+    for (i = 0; i < E.length; i++) { var e = E[i], along = e.ax === 'x' ? fx : fy, across = e.ax === 'x' ? fy : fx, o = e.s > 0 ? along - N : -along;
+      if (o > -0.6 && o < 14) { var w = Math.sin(Math.max(0, o) * 0.42 + e.c) * clamp(o / 4, 0, 1) * 1.1; if (Math.abs(across - e.c - w) < 0.48) return 2; } }
+    if ((fx < 0 || fy < 0) && d < 1.8 && fx + fy + vnoise(fx / 2.3, fy / 2.3, 77) * 3 < 7) return 5;
+    if (sur === 'wooded' && d < 2.2 + vnoise(fx / 3.1, fy / 3.1, 71) * 2.6) return 7;
+    if (d < 1.1) return 1;
+    var cx = Math.floor(fx / 4), cy = Math.floor(fy / 3), h = ih(cx, cy, 211), lx = fx - cx * 4, ly = fy - cy * 3;
+    if ((lx < 0.3 && ih(cx, cy, 212) < 0.5) || (ly < 0.3 && ih(cx, cy, 213) < 0.5)) return 7;
+    if (h < (sur === 'wooded' ? 0.28 : 0.14)) return 7;
+    if (h < 0.48) return ih(cx, cy, 214) < 0.5 ? 8 : 9;
+    if (h < 0.56) return 10;
+    return 1;
+  }
   /* lay/tag: optional alternative tile layout (Era 0 shoreline) cached under its own tag */
   function terrain(season, biome, lay0, tag) {
-    var key = (tag ? tag + '|' : '') + season + '|' + biome; var hit = TERR.get(key); if (hit) return hit;
+    var sur = lay0 ? 'off' : (OPT.surround || 'open'), SUR = sur !== 'off', DY = SUR ? -120 : 0;
+    var key = (tag ? tag + '|' : '') + season + '|' + biome + '|' + sur; var hit = TERR.get(key); if (hit) return hit;
     var S = SEASONS[season] || SEASONS[1], B = BIOMES[biome] || BIOMES.grassland, winter = !!((S.snow && !B.hot) || B.snow);
     var grass = winter ? 'snow' : (B.grass || S.grass), dirt = B.dirt || 'dirt', rock = B.rock || 'river', water = B.water || 'water';
     var lip = winter ? 'snow' : (B.grass || S.grass);
     var p = new Pix(WW, WH), T = new Uint8Array(WW * WH), lay = lay0 || layout(), i, px, py;
-    for (py = 0; py < WH; py++) { var sc = py < NY + 30 ? R('sky', 1) : R('sky', 0); for (px = 0; px < WW; px++) p.d[py * WW + px] = sc; }
-    hills(p, winter);
-    for (py = NY - 2; py < NY + 388; py++) for (px = 0; px < WW; px++) {
-      var rx = px + 0.5 - NX, ry = py + 0.5 - NY, fx = (rx / 16 + ry / 8) / 2, fy = (ry / 8 - rx / 16) / 2;
-      if (fx < 0 || fy < 0 || fx >= MAPN || fy >= MAPN) continue;
-      var wx = (vnoise(px / 7, py / 4, 11) - 0.5) * 0.55, wy = (vnoise(px / 7, py / 4, 29) - 0.5) * 0.55;
-      T[py * WW + px] = lay[clamp(Math.floor(fy + wy), 0, 23) * MAPN + clamp(Math.floor(fx + wx), 0, 23)];
+    for (py = 0; py < WH; py++) { var sc = py < NY + 30 + DY ? R('sky', 1) : R('sky', 0); for (px = 0; px < WW; px++) p.d[py * WW + px] = sc; }
+    hills(p, winter, SUR);
+    var IN = new Uint8Array(WW * WH), OUT = new Uint8Array(WW * WH), HA = new Int16Array(WW), y0 = SUR ? HZ - 6 : NY - 2, y1 = SUR ? WH : NY + 388;
+    for (px = 0; px < WW; px++) HA[px] = HZ + Math.round((vnoise(px / 37, 1.7, 41) - 0.5) * 8);
+    for (py = y0; py < y1; py++) for (px = 0; px < WW; px++) {
+      var rx = px + 0.5 - NX, ry = py + 0.5 - NY, fx = (rx / 16 + ry / 8) / 2, fy = (ry / 8 - rx / 16) / 2, ins = !(fx < 0 || fy < 0 || fx >= MAPN || fy >= MAPN);
+      if (!ins && (!SUR || py < HA[px])) continue;
+      var wx = (vnoise(px / 7, py / 4, 11) - 0.5) * 0.55, wy = (vnoise(px / 7, py / 4, 29) - 0.5) * 0.55, q0 = py * WW + px;
+      if (ins) { T[q0] = lay[clamp(Math.floor(fy + wy), 0, 23) * MAPN + clamp(Math.floor(fx + wx), 0, 23)]; IN[q0] = 1; }
+      else { T[q0] = outerTile(fx + wx, fy + wy, sur); OUT[q0] = 1; }
     }
     var T0 = T.slice();
     for (i = WW + 1; i < T.length - WW - 1; i++) { var v = T0[i]; if (!v) continue;
       var nb = [T0[i - 1], T0[i + 1], T0[i - WW], T0[i + WW]];
       if (nb.indexOf(v) < 0) { var best = 0; nb.forEach(function (q) { if (q) best = q; }); if (best) T[i] = best; } }
-    var base = [0, R(grass, winter ? 0 : 1), R(dirt, 1), R(dirt, 0), R(water, 2), R(rock, 1), R(dirt, 2)];
+    var base = [0, R(grass, winter ? 0 : 1), R(dirt, 1), R(dirt, 0), R(water, 2), R(rock, 1), R(dirt, 2), R(grass, winter ? 0 : 1), R(dirt, 1), R(dirt, 1), R(dirt, 1)];
     for (i = 0; i < T.length; i++) if (T[i]) p.d[i] = base[T[i]];
-    /* [anki-fork] full ground: outside the 24x24 diamond the world is meadow (mountains stay as the far backdrop), no floating island */
-    var OUT = new Uint8Array(WW * WH), yH = new Int16Array(WW);
-    for (px = 0; px < WW; px++) yH[px] = NY + 86 + Math.round(vnoise(px / 38, 5, 3) * 18);
-    for (py = NY; py < WH; py++) for (px = 0; px < WW; px++) {
-      i = py * WW + px; if (T[i] || py < yH[px]) continue;
-      OUT[i] = 1; T[i] = 1; p.d[i] = base[1];
-    }
     function stamp(sh, sx, sy, ty, ramp, fl) {
       for (var j = 0; j < sh.length; j++) for (var k = 0; k < sh[j].length; k++) {
         var ch = sh[j][k]; if (ch === '.') continue; var x = sx + k, y = sy + j; if (x < 0 || y < 0 || x >= WW || y >= WH) continue;
@@ -373,15 +441,15 @@
       }
     }
     var fmul = (B.flowers || 1) * S.flowers;
-    for (var cy = NY; cy < WH; cy += 4) for (var cx = 0; cx < WW; cx += 6) {
+    for (var cy = y0; cy < y1; cy += 4) for (var cx = 0; cx < WW; cx += 6) {
       px = cx + (ih(cx, cy, 1) * 6 | 0); py = cy + (ih(cx, cy, 2) * 4 | 0); if (py >= WH) continue;
       var ty = T[py * WW + px]; if (!ty) continue;
       var r = ih(cx, cy, 3), fl = FLOWERS[ih(cx, cy, 4) * FLOWERS.length | 0], X = px - 1, Y = py - 1;
       if (B.cracks && (ty === 1 || ty === 5 || ty === 6) && ih(cx, cy, 6) < B.cracks * (ty === 1 ? 0.6 : 1.8)) { stamp(ST.crack, X, Y, ty, 'ember'); continue; }
-      if (ty === 1) {
-        if (winter) { if (r < 0.35) stamp(ST.drift, X, Y, 1, 'snow'); else if (r < 0.43) stamp(ST.frost, X, Y, 1, 'frost'); }
-        else if (r < 0.38) stamp(ST.clump, X, Y, 1, grass); else if (r < 0.55) stamp(ST.dark, X, Y, 1, grass);
-        else if (r < 0.65) stamp(ST.tuft, X, Y, 1, grass); else if (r < 0.65 + fmul) stamp(ST.flower, X, Y, 1, grass, fl);
+      if (ty === 1 || ty === 7) {
+        if (winter) { if (r < 0.35) stamp(ST.drift, X, Y, ty, 'snow'); else if (r < 0.43) stamp(ST.frost, X, Y, ty, 'frost'); }
+        else if (r < 0.38) stamp(ST.clump, X, Y, ty, grass); else if (r < 0.55) stamp(ST.dark, X, Y, ty, grass);
+        else if (r < 0.65) stamp(ST.tuft, X, Y, ty, grass); else if (r < 0.65 + fmul) stamp(ST.flower, X, Y, ty, grass, fl);
       } else if (ty === 2) {
         if (winter && r < 0.45) stamp(ST.drift, X, Y, 2, 'snow'); else if (r < 0.62 && r > 0.45) stamp(ST.pebble, X, Y, 2, rock); else if (r < 0.2) stamp(ST.rut, X, Y, 2, dirt);
       } else if (ty === 3) {
@@ -394,7 +462,7 @@
       }
     }
     var frozen = winter && water !== 'ember', waves = [];
-    for (py = NY; py < NY + 388; py++) for (px = 3; px < WW - 3; px++) {
+    for (py = y0; py < y1; py++) for (px = 3; px < WW - 3; px++) {
       i = py * WW + px; if (T[i] !== 4) continue;
       var edge = T[i - 1] !== 4 || T[i + 1] !== 4 || T[i - WW] !== 4 || T[i + WW] !== 4;
       if (edge) { p.d[i] = frozen ? R('snow', 1) : R(water, 0); continue; }
@@ -404,29 +472,56 @@
       else { p.d[i] = R(water, bt); if (wave) waves.push(i, ((px + 2 * py) >> 3) & 3, bt); }
     }
     for (i = WW; i < T.length - WW; i++) if (T[i] && T[i] !== 4 && T[i + WW] === 4) p.d[i] = winter ? R('snow', 3) : R(dirt, 3);
-    /* [anki-fork] far forest and meadow props outside the map, drawn into the terrain layer (behind every building and citizen) */
-    (function () {
-      var fol = winter ? 'frost' : (B.tree || S.tree), pine = (B.tree && B.tree !== 'lush' && B.tree !== 'frost') ? B.tree : 'conifer', dens = (B.hot ? 0.5 : 1) * (B.snow ? 1.1 : 1), list = [];
-      for (var gy = yH[0] + 6; gy < WH + 20; gy += 10) for (var gx = -6; gx < WW + 6; gx += 11) {
-        var jx = Math.round(gx + (ih(gx, gy, 71) - 0.5) * 9), jy = Math.round(gy + (ih(gx, gy, 72) - 0.5) * 8);
-        if (jx < 0 || jx >= WW || jy < 0 || jy >= WH) continue;
-        var q = jy * WW + jx; if (!OUT[q] || jy < yH[jx] + 4) continue;
-        var rx2 = jx + 0.5 - NX, ry2 = jy + 0.5 - NY, fx2 = (rx2 / 16 + ry2 / 8) / 2, fy2 = (ry2 / 8 - rx2 / 16) / 2;
-        var d2 = Math.min(fx2, fy2, MAPN - fx2, MAPN - fy2);           /* tiles outside the map edge (negative inside) */
-        if (d2 > -0.8) continue;
-        var near = Math.min(1, (-d2 - 0.8) / 3), back = Math.max(0, 1 - (jy - yH[jx]) / 60), r = ih(jx, jy, 73);
-        var pr = (0.18 + 0.55 * near + 0.3 * back) * dens;
-        if (r > pr) { if (r < pr + 0.05 && d2 < -1.5) list.push({ n: 'bush', x: jx, y: jy, m: { FOLIAGE: fol, WOOD: 'walnut' } }); continue; }
-        var k = ih(jx, jy, 74), kind = B.tree === 'dry' || B.tree === 'ashleaf' || B.tree === 'scorch' ? (k < 0.5 ? 'tree_dead' : 'tree_broadleaf') : (k < 0.5 ? 'tree_pine' : (winter ? 'tree_dead' : 'tree_broadleaf'));
-        list.push({ n: kind, x: jx, y: jy, m: kind === 'tree_pine' ? { FOLIAGE: pine, WOOD: 'walnut' } : kind === 'tree_dead' ? { WOOD: 'walnut' } : { FOLIAGE: fol, WOOD: 'oak' }, f: ih(jx, jy, 75) < 0.5 });
+    if (!SUR) for (px = 0; px < WW; px++) {
+      var yb = -1; for (py = NY + 390; py >= NY; py--) if (T[py * WW + px]) { yb = py; break; }
+      if (yb < 0) continue;
+      var off = px < NX ? 0 : 1, wav = Math.round(vnoise(px / 9, 3, 5) * 2);
+      for (var k = 1; k <= 14; k++) {
+        var c = k <= 2 ? R(lip, 2 + off) : (k <= 6 + wav ? R(dirt, 1 + off) : R(dirt, 2 + off));
+        if (k > 3 && k < 13 && ih(px >> 2, (k + ((px >> 2) & 1)) >> 1, 9) < 0.12) c = R(rock, 1 + off);
+        if (k === 14) c = R(dirt, 4);
+        p.set(px, yb + k, c);
       }
-      list.sort(function (a, b2) { return a.y - b2.y || a.x - b2.x; });
-      list.forEach(function (o) {
-        var d = SK.PIECES[o.n], sp = sprite(o.n, o.m, { flip: !!o.f }), ax = o.f ? d.w - 1 - d.anchor[0] : d.anchor[0];
-        p.blit(sp, o.x - ax, o.y - d.anchor[1]);
-      });
-    })();
-    var out = { pix: p, T: T, waves: waves, water: water, frozen: frozen, season: season, biome: biome };
+    }
+    var O = null;
+    if (SUR) {
+      for (i = 0; i < T.length; i++) { var tq = T[i]; if (tq < 8 || IN[i]) continue;
+        var X0 = i % WW, Y0 = (i / WW) | 0, row = mod(tq === 9 ? X0 + 2 * Y0 : X0 - 2 * Y0, 6) < 2, b0, r0;
+        if (winter) { b0 = R('snow', 0); r0 = R('snow', 2); }
+        else if (tq === 10 || (tq === 9 && season === 2)) { b0 = R(dirt, 1); r0 = R(dirt, 2); }
+        else if (tq === 8) { b0 = season === 0 ? R(dirt, 1) : R('straw', season === 1 ? 1 : 2); r0 = season === 0 ? R(grass, 1) : season === 1 ? R('straw', 2) : R(dirt, 2); }
+        else { b0 = R(grass, 2); r0 = R(grass, 1); }
+        p.d[i] = row ? r0 : b0;
+      }
+      /* baked canopy for the far woods; the near belt (within 2.6 tiles, below the haze) is real tree sprites from world.js */
+      var PF = { tundra: 0.9, taiga: 0.85, forest: 0.5, oceanic: 0.3, swamp: 0.15, savanna: 0, desert: 0, hellscape: 0, volcanic: 0.2, ashland: 0.35, eden: 0.2 }[biome];
+      if (PF == null) PF = 0.4;
+      var fb = winter ? 'frost' : (B.tree || S.tree), fp = B.tree && B.tree !== 'lush' && B.tree !== 'frost' ? B.tree : 'conifer';
+      var put = function (x, y, c) { if (x < 0 || y < 0 || x >= WW || y >= WH) return; var q = y * WW + x; if (IN[q]) return; p.d[q] = c; OUT[q] = 1; };
+      for (py = y0; py < WH + 10; py += 3) for (px = ((py / 3) & 1) * 2 - 4; px < WW + 4; px += 5) {
+        var jx = px + (ih(px, py, 301) * 3 | 0) - 1, jy = py + (ih(px, py, 302) * 2 | 0), cr = ih(px, py, 303);
+        if (jx < 0 || jy < 0 || jx >= WW || jy >= WH || T[jy * WW + jx] !== 7 || IN[jy * WW + jx]) continue;
+        if (jy >= HZ + 60 && pxD(jx, jy) < 2.6) continue;
+        if (cr < PF) { var hg = 9 + ((cr * 97) | 0) % 3;
+          for (var j = 0; j < hg; j++) { var hf = Math.floor((j + 2) * 0.42); for (var kk = -hf; kk <= hf; kk++) {
+            var tn = j === hg - 1 || kk === hf ? 4 : kk > 0 ? 3 : kk === -hf ? 2 : 1;
+            put(jx + kk, jy - hg + 1 + j, winter && kk <= 0 && (j < 2 || j % 3 === 0) ? R('snow', j < 2 ? 0 : 1) : R(fp, tn)); } }
+        } else { var crx = 4 + ((cr * 71) | 0) % 3, cry = 3 + ((cr * 53) | 0) % 2;
+          for (var yy = -cry; yy <= cry; yy++) for (var xx = -crx; xx <= crx; xx++) {
+            var e2 = (xx * xx) / (crx * crx) + (yy * yy) / (cry * cry); if (e2 > 1) continue;
+            var s2 = xx / crx * 0.55 + yy / cry * 0.85, tn2 = e2 > 0.7 && s2 > 0.15 ? 4 : s2 < -0.5 ? 1 : s2 < 0.2 ? 2 : 3;
+            put(jx + xx, jy - cry + yy, winter && yy < -cry * 0.4 && s2 < 0.1 ? R('snow', 1) : R(fb, tn2)); } }
+      }
+      /* aerial perspective in two hard bands (no dithering): far land turns sage / frost, the middle band loses its darkest tones */
+      var hr = winter ? 'frost' : 'sage', RV = pal().rev;
+      for (py = 0; py < HZ + 70 && py < WH; py++) for (px = 0; px < WW; px++) { i = py * WW + px; if (!OUT[i]) continue;
+        var dd = py - HA[px] + Math.round((vnoise(px / 11, py / 6, 63) - 0.5) * 8), en = RV.get(p.d[i]); if (!en || dd >= 52) continue;
+        if (dd < 22) p.d[i] = R(hr, clamp(en[1] + 1, 1, 4)); else if (en[1] >= 2) p.d[i] = R(en[0], en[1] - 1);
+      }
+      O = new Uint8Array(WW * WH);
+      for (i = 0; i < T.length; i++) if (!IN[i]) { O[i] = T[i]; T[i] = 0; }
+    }
+    var out = { pix: p, T: T, O: O, dy: DY, sur: sur, waves: waves, water: water, frozen: frozen, season: season, biome: biome };
     TERR.set(key, out); return out;
   }
 
@@ -446,7 +541,7 @@
   /* WK: buildings, terrain, decor, smoke and sky are drawn at world resolution then upscaled by WK;
      citizens, animals, rain and tap feedback are drawn on top at native resolution (1 view pixel = 1 citizen pixel). */
   var WK = 2;
-  var V = null, OPT = { scale: 1, grid: false, demo: false, slots: false, night: false, gray: false, pixelTrue: false, silhouette: false, clone: false, badge: false };
+  var V = null, OPT = { surround: 'open', scale: 1, grid: false, demo: false, slots: false, night: false, gray: false, pixelTrue: false, silhouette: false, clone: false, badge: false };
   function init(canvas, o) {
     o = o || {};
     var off = document.createElement('canvas'); off.width = WW * WK; off.height = WH * WK;
@@ -478,7 +573,7 @@
   function compose(tr, wf, season, state) {
     var b = V.buf, i, k, vil = SK.village;
     var ctx = { T: tr.T, season: season, biome: tr.biome, t: V.t, state: state, opt: OPT, tr: tr };
-    var skey = tr.season + '|' + tr.biome + '|' + OPT.demo + '|' + OPT.grid + '|' + OPT.slots + '|' + OPT.night + '|' + OPT.clone + '|' + (vil ? vil.signature(state, ctx) : '');
+    var skey = tr.season + '|' + tr.biome + '|' + OPT.demo + '|' + OPT.grid + '|' + OPT.slots + '|' + OPT.night + '|' + OPT.clone + '|' + tr.sur + '|' + (vil ? vil.signature(state, ctx) : '');
     if (V.skey !== skey) { V.skey = skey; V.stat = V.stat || new Pix(WW, WH); staticLayer(V.stat, tr, season, ctx); }
     b.d.set(V.stat.d);
     var w = tr.waves;
@@ -571,7 +666,7 @@
     if (SK.biomeMod) biome = SK.biomeMod(state, biome);
     var tr = terrain(season, biome), wf = tr.frozen ? 0 : Math.floor(V.t / 200) & 3;
     if (SK.village) SK.village.update(state, V.t, OPT);
-    var key = season + '|' + biome + '|' + wf + '|' + Math.floor(V.t / 125) + '|' + OPT.grid + '|' + OPT.demo + '|' + OPT.slots + '|' + OPT.night + '|' + OPT.silhouette + '|' + OPT.clone;
+    var key = season + '|' + biome + '|' + wf + '|' + Math.floor(V.t / 125) + '|' + OPT.grid + '|' + OPT.demo + '|' + OPT.slots + '|' + OPT.night + '|' + OPT.silhouette + '|' + OPT.clone + '|' + OPT.surround;
     if (force || key !== V.key) { V.key = key; compose(tr, wf, season, state); V.octx.putImageData(V.img, 0, 0); }
   }
   /* fakeState() -> village (race.species 'human'); fakeState('protoplasm') -> Era 0 state (see SK.evo.fake) */
@@ -622,9 +717,11 @@
     if (SK.evo && SK.evo.samples) SK.evo.samples().forEach(function (s) { scan(s.pix, s.label); });
     if (ROT_LOG.length) issues.push(ROT_LOG.length + ' non-90° rotation request(s)');
     var total = 0; Object.keys(counts).forEach(function (k) { total += counts[k]; });
-    var t0 = 0, tgt = 0, b9 = 0; Object.keys(BASE).forEach(function (k) { t0 += BASE[k]; });
+    var t0 = 0, tgt = 0, b9 = 0, b10 = 0; Object.keys(BASE).forEach(function (k) { t0 += BASE[k]; });
     Object.keys(EXPECTED).forEach(function (k) { tgt += EXPECTED[k]; if (ERA0[k]) b9 += counts[k] || 0; });
-    return { counts: counts, expected: EXPECTED, base: BASE, total: total, target: tgt, baseTotal: t0, b8: total - t0 - b9, b9: b9, era0: ERA0, issues: issues, notes: notes, scanned: scanned };
+    Object.keys(SK.PIECES).forEach(function (n) { if (SK.PIECES[n].b10) b10++; });
+    if (SK.era2 && SK.era2.check) SK.era2.check(issues, notes);
+    return { counts: counts, expected: EXPECTED, base: BASE, total: total, target: tgt, baseTotal: t0, b8: total - t0 - b9 - b10, b9: b9, b10: b10, era0: ERA0, issues: issues, notes: notes, scanned: scanned };
   }
 
   G.SpriteKit = {
@@ -642,12 +739,12 @@
       raf = requestAnimationFrame(tick);
       return { stop: function () { alive = false; cancelAnimationFrame(raf); }, set: setOptions, reward: function () { if (SK.ui && V) SK.ui.reward(V.t); } };
     },
-    isReady: function () { if (SK._runExt) SK._runExt(); return !!(SK.PALETTE && SK.PARTS.b1 && SK.PARTS.b2 && SK.PARTS.b3 && SK.PARTS.b4 && SK.PARTS.b5 && SK.PARTS.b6 && SK.PARTS.b7 && SK.PARTS.b8 && SK.PARTS.b9 && SK.era1 && SK.evo && SK.village && SK.village.b3 && SK.village.b4 && SK.citizens && SK.world && SK.ui); },
+    isReady: function () { if (SK._runExt) SK._runExt(); return !!(SK.PALETTE && SK.PARTS.b1 && SK.PARTS.b2 && SK.PARTS.b3 && SK.PARTS.b4 && SK.PARTS.b5 && SK.PARTS.b6 && SK.PARTS.b7 && SK.PARTS.b8 && SK.PARTS.b9 && SK.PARTS.b10 && SK.era1 && SK.era2 && SK.evo && SK.village && SK.village.b3 && SK.village.b4 && SK.citizens && SK.world && SK.ui); },
     _: { pal: pal, R: R, shift: shift, darkest: darkest, Pix: Pix, sprite: sprite, slotMap: slotMap, shell: shell, terrain: terrain, layout: layout,
       texC: texC, selout: selout, fillPoly: fillPoly, line: line, worldPt: worldPt, ih: ih, ATLAS: ATLAS, NX: NX, NY: NY, MAPN: MAPN,
       CH: CH, SEASONS: SEASONS, BIOMES: BIOMES, BUILDINGS: BUILDINGS, JOBS: JOBS, RESOURCES: RESOURCES, EXPECTED: EXPECTED, BASE: BASE, OPT: OPT, DEMO: DEMO,
       rng: rng, hash: hash, mulberry32: mulberry32, selfCheck: selfCheck, WW: WW, WH: WH,
-      vnoise: vnoise, up: up, WK: WK, view: function () { return V; }, villageFrame: villageFrame, ERA0: ERA0,
+      vnoise: vnoise, up: up, WK: WK, HZ: HZ, outerTile: outerTile, outerD: outerD, view: function () { return V; }, villageFrame: villageFrame, ERA0: ERA0,
       families: function () { return SK.PALETTE.families; } }
   };
 })(window);

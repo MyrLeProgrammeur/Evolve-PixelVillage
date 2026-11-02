@@ -69,8 +69,8 @@
     var ct = Pg(0.425, 0.325, ch); p.set(ct[0] - 1, ct[1] - 1, X.pal().ink); p.set(ct[0], ct[1] - 1, X.pal().ink);
     /* pale cylinder tank at the back right */
     var tankR = tier === 1 ? 'lime' : 'aluminium', th = 16 + v.dh + c.extra, hoop = tier === 1 ? 'walnut' : metal;
-    B.put(F, { w: 0.9, d: 0.9, h: th, shape: 'round', r: 8, plinth: tier === 3 ? 3 : 0, plinthRamp: 'river',
-      wall: { tex: tier === 3 ? 'tex_cutstone' : 'tex_planks', ramp: tankR }, roof: { type: 'dome', tex: tier === 3 ? 'tex_cutstone' : 'tex_planks', ramp: tankR, H: 5 }, snow: c.snow }, 1.0, 0.15);
+    B.put(F, { w: 0.9, d: 0.9, h: th, shape: 'round', r: 8, plinth: tier >= 3 ? 3 : 0, plinthRamp: 'river',
+      wall: { tex: tier >= 3 ? 'tex_cutstone' : 'tex_planks', ramp: tankR }, roof: { type: 'dome', tex: tier >= 3 ? 'tex_cutstone' : 'tex_planks', ramp: tankR, H: 5 }, snow: c.snow }, 1.0, 0.15);
     var cc = Pg(1.45, 0.6);
     ring(p, cc, 8, 3, hoop); ring(p, cc, 8, th - 3, hoop);
     if (tier >= 2) ring(p, cc, 8, round(th / 2), hoop);
@@ -83,7 +83,7 @@
       roof: { type: 'gable', axis: 'x', tex: c.m.roofTex, ramp: c.m.roofR, pitch: 2 }, snow: c.snow };
     B.shade(F, 0.13, 1.0, 1.15, 1.7);
     var g = B.put(F, spec, 0.13, 1.02); B.roofDetail(p, g); B.hutDoor(p, g, 'L', c);
-    H.onFace(p, g, 'R', tier === 3 ? 'win_glazed' : 'win_shutter', { MAIN: v.paint2 }, H.snap(3, 'R', 6), 6);
+    H.onFace(p, g, 'R', tier >= 3 ? 'win_glazed' : 'win_shutter', { MAIN: v.paint2 }, H.snap(3, 'R', 6), 6);
     /* aluminium ingots at the door, filled from resource.Aluminium */
     var iq = o.fq == null ? 0.6 : o.fq, ip = Pg(1.35, 1.8);
     if (iq > 0.05) B.stack(p, ip[0], ip[1], 'unit_ingot', { MAIN: 'aluminium' }, 3, 6, 3, iq);

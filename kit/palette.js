@@ -85,7 +85,13 @@
       lagoon:     ['#cdeec0', '#92d2aa', '#5daa96', '#3f7d7c', '#2c5462'],
       cytoplasm:  ['#fde9c6', '#f4c7a2', '#dc9d86', '#ab6f6e', '#6f4753'],
       nacre:      ['#f6ead8', '#dcc4d2', '#b097b6', '#7c6c90', '#4d4563'],
-      kelp:       ['#dcd47c', '#a8ab55', '#728543', '#4b603c', '#2e3e30']
+      kelp:       ['#dcd47c', '#a8ab55', '#728543', '#4b603c', '#2e3e30'],
+
+      /* Era 2 additions (own family): engine brick, galvanised zinc, window glass, red-lead primer */
+      ironbrick:  ['#c48b72', '#985748', '#6d3a39', '#48282f', '#2c1a22'],
+      zinc:       ['#e3e6da', '#b8bfb8', '#8b9494', '#616a6f', '#40474f'],
+      glass:      ['#d0e2d8', '#94b5b8', '#678a99', '#476178', '#2f3f55'],
+      oxide:      ['#f2a276', '#cf6a47', '#9d4636', '#692e2b', '#411c1f']
     },
     /* Semantic base slots -> default ramp. The generator recolours by swapping the ramp in a slot. */
     slots: { WOOD: 'oak', STONE: 'river', CLAY: 'terracotta', FOLIAGE: 'summer', SKIN: 'skin_fair', CLOTH_A: 'saffron', CLOTH_B: 'indigo', METAL: 'iron' },
@@ -101,7 +107,8 @@
       { id: 'metal', label: 'Metal (tech tiers)', slot: 'METAL', ramps: ['copper', 'bronze', 'iron', 'steel', 'gold'] },
       { id: 'ground', label: 'Ground, snow, water, sky, fire', slot: 'terrain', ramps: ['dirt', 'sand', 'basalt', 'ashen', 'snow', 'water', 'murk', 'sky', 'haze', 'ember'] },
       { id: 'era1', label: 'Era 1 additions', slot: 'METAL / SKIN', ramps: ['aluminium', 'skin_pale'] },
-      { id: 'era0', label: 'Era 0 additions (pool, cells)', slot: 'MAIN / water', ramps: ['abyss', 'bog', 'lagoon', 'cytoplasm', 'nacre', 'kelp'] }
+      { id: 'era0', label: 'Era 0 additions (pool, cells)', slot: 'MAIN / water', ramps: ['abyss', 'bog', 'lagoon', 'cytoplasm', 'nacre', 'kelp'] },
+      { id: 'era2', label: 'Era 2 additions (brick and steel)', slot: 'WALL / ROOF / GLASS / PAINT', ramps: ['ironbrick', 'zinc', 'glass', 'oxide'] }
     ]
   };
 })(window);

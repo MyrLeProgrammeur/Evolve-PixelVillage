@@ -78,7 +78,8 @@
   var DEC = { key: '', list: [], trees: [], spots: {} };
   function scatter(season, biome, nLY, started) {
     if (started === undefined) started = true;
-    var key = season + '|' + biome + '|' + nLY + '|' + (started ? 1 : 0); if (DEC.key === key) return DEC;
+    var sur = (X.OPT && X.OPT.surround) || 'open';
+    var key = season + '|' + biome + '|' + nLY + '|' + (started ? 1 : 0) + '|' + sur; if (DEC.key === key) return DEC;
     var E = env(season, biome), TS = TREES[biome] || TREES[String(biome).split('+')[0]] || TREES.grassland, rs = reserved(), T = X.layout(), list = [], trees = [], pts = [];
     function tt(u, v) { var x = floor(u), y = floor(v); if (x < 0 || y < 0 || x >= N || y >= N) return 0; var q = y * N + x; return rs[q] ? 0 : T[q]; }
     function far(u, v, d) { for (var i = 0; i < pts.length; i++) if (Math.hypot(pts[i][0] - u, pts[i][1] - v) < d) return false; return true; }
@@ -96,6 +97,20 @@
       else { var q = ih(ix, iy, 504); kind = q < TS.pine ? 'pine' : q < TS.pine + TS.broad ? 'broad' : q < TS.pine + TS.broad + TS.dead ? 'dead' : (TS.bush ? 'bush' : 'sapling'); }
       list.push({ kind: kind, u: u, v: v, seed: ix * 31 + iy });
       if (kind !== 'stump' && kind !== 'bush') trees.push([u, v]);
+    }
+    /* woodland past the map edge: real sprites in a 2.6-tile belt; each lumber yard fells another ~0.3 tile of it (stumps) */
+    if (sur !== 'off') {
+      var rec = Math.min(2.4, nLY * 0.3), lim = X.HZ + 60;
+      for (gy = -4; gy < N + 5; gy += 0.6) for (gx = -4; gx < N + 5; gx += 0.6) {
+        ix = round(gx * 10) + 600; iy = round(gy * 10) + 600; u = gx + ih(ix, iy, 541) * 0.4; v = gy + ih(ix, iy, 542) * 0.4;
+        var od = X.outerD(u, v); if (od < 0.15 || od > 2.6) continue;
+        var g0 = wp(u, v); if (g0[0] < -10 || g0[0] > WW + 10 || g0[1] < lim || g0[1] > WH + 40) continue;
+        if (X.outerTile(u, v, sur) !== 7 || ih(ix, iy, 543) > 0.8 || !far(u, v, 0.8)) continue;
+        pts.push([u, v]);
+        if (od < rec + 0.15) { if (ih(ix, iy, 544) < 0.55) list.push({ kind: 'stump', u: u, v: v, seed: ix * 13 + iy }); continue; }
+        var q3 = ih(ix, iy, 545), k3 = q3 < TS.pine ? 'pine' : q3 < TS.pine + TS.broad ? 'broad' : q3 < TS.pine + TS.broad + TS.dead ? 'dead' : (TS.bush ? 'bush' : 'sapling');
+        list.push({ kind: k3, u: u, v: v, seed: ix * 13 + iy });
+      }
     }
     var bushMul = TS.bush || 1;
     for (gy = 0.3; gy < N - 0.3; gy += 0.7) for (gx = 0.3; gx < N - 0.3; gx += 0.7) {
@@ -142,7 +157,7 @@
   var DAY = 0;
   function decor(ctx) {
     var items = (VL.vil.plan && VL.vil.plan.list) || [], nLY = items.filter(function (i) { return i.type === 'lumber_yard'; }).length;
-    var D = scatter(ctx.season, ctx.biome || 'grassland', nLY, VL.vil.started !== false), E = D.E, S = E.S, T = ctx.T;
+    var D = scatter(ctx.season, ctx.biome || 'grassland', nLY, VL.vil.started !== false), E = D.E, S = E.S, T = ctx.T, O = ctx.tr && ctx.tr.O;
     DAY = cal(ctx.state).day | 0;
     return D.list.map(function (o) {
       var L = look(o.kind, E, o.seed), d = P[L.n], s = variant(L.n, L.m, L.o), ax = L.o.flip ? d.w - 1 - d.anchor[0] : d.anchor[0], ay = d.anchor[1];
@@ -150,7 +165,7 @@
       return { k: o.u + o.v, v: o.v,
         shadow: function (b) {
           var g = wp(o.u, o.v), cx = round(g[0]) + round(tall * 0.18 * S.shadow), cy = round(g[1]), rx = big ? Math.max(4, round(d.w * 0.42)) : round(d.w * 0.4), ry = Math.max(1, round(rx / 2.4));
-          for (var y = -ry; y <= ry; y++) for (var x = -rx; x <= rx; x++) { if ((x * x) / (rx * rx) + (y * y) / (ry * ry) > 1) continue; var px = cx + x, py = cy + y; if (px < 0 || py < 0 || px >= WW || py >= WH) continue; var q = py * WW + px; if (T[q]) b.d[q] = X.shift(b.d[q], 1); }
+          for (var y = -ry; y <= ry; y++) for (var x = -rx; x <= rx; x++) { if ((x * x) / (rx * rx) + (y * y) / (ry * ry) > 1) continue; var px = cx + x, py = cy + y; if (px < 0 || py < 0 || px >= WW || py >= WH) continue; var q = py * WW + px; if (T[q] || (O && O[q])) b.d[q] = X.shift(b.d[q], 1); }
         },
         draw: function (b, blitD) {
           var g = wp(o.u, o.v), bx = round(g[0]) - ax, by = round(g[1]) - ay;
@@ -180,8 +195,9 @@
     if (m) for (var i = 0, n = Math.min(b.d.length, (X.NY + 80) * WW); i < n; i++) { var v = b.d[i]; if (v === s0) b.d[i] = m[0]; else if (v === s1) b.d[i] = m[1]; }
     var nt = ctx.opt && ctx.opt.night;
     if (nt) for (var si = 0; si < 90; si++) { var sx = floor(ih(si, 1, 951) * WW), sy = floor(ih(si, 2, 952) * (X.NY + 60)); if (isSky(b.d[sy * WW + sx])) b.d[sy * WW + sx] = si % 7 ? R('ember', 0) : X.pal().spark; }
-    if (w !== 0 && !nt) sun(b, 236, 196);
-    if (w !== 0) { moon(b, 612, 192, nt, ((c.moon | 0) % 28 + 28) % 28); }
+    var dy = (ctx.tr && ctx.tr.dy) || 0;
+    if (w !== 0 && !nt) sun(b, 236, 196 + dy);
+    if (w !== 0) { moon(b, 612, 192 + dy, nt, ((c.moon | 0) % 28 + 28) % 28); }
   }
   function isSky(v) { return v === SKYC[0] || v === SKYC[1]; }
   function sun(b, cx, cy) {
@@ -288,11 +304,11 @@
   /* ---------- weather ---------- */
   var CLOUD = [[0, 0, 9], [10, -3, 8], [20, 1, 7], [-9, 2, 6]];
   function clouds(b, ctx) {
-    var t = ctx.t, c = cal(ctx.state), w = c.weather == null ? 2 : c.weather | 0, wind = c.wind | 0, T = ctx.T;
+    var t = ctx.t, c = cal(ctx.state), w = c.weather == null ? 2 : c.weather | 0, wind = c.wind | 0, T = ctx.T, O = ctx.tr && ctx.tr.O, dy = (ctx.tr && ctx.tr.dy) || 0;
     var n = w === 2 ? 3 : w === 1 ? 7 : 9, cols = w === 0 ? [R('slate', 1), R('slate', 2), R('slate', 3)] : [R('snow', 0), R('snow', 1), R('snow', 2)];
     var cset = cols.concat(SKYC);
     for (var i = 0; i < n; i++) {
-      var sc = 1 + ih(i, 1, 701) * 0.8, cx = round(((ih(i, 2, 702) * (WW + 140) + (t / 1000) * (3 + wind * 7 + i)) % (WW + 140)) - 70), cy = round(150 + ih(i, 3, 703) * 50);
+      var sc = 1 + ih(i, 1, 701) * 0.8, cx = round(((ih(i, 2, 702) * (WW + 140) + (t / 1000) * (3 + wind * 7 + i)) % (WW + 140)) - 70), cy = round(150 + dy + ih(i, 3, 703) * 50);
       CLOUD.forEach(function (q) {
         var r = q[2] * sc, ox = cx + q[0] * sc, oy = cy + q[1] * sc;
         for (var y = floor(-r / 1.6); y <= 4; y++) for (var x = floor(-r); x <= r; x++) {
@@ -311,7 +327,7 @@
         for (var y = -e[3]; y <= e[3]; y++) for (var x = -e[2]; x <= e[2]; x++) {
           if ((x * x) / (e[2] * e[2]) + (y * y) / (e[3] * e[3]) > 1) continue;
           var px = ex + x, py = ey + y; if (px < 0 || py < 0 || px >= WW || py >= WH) continue; var q = py * WW + px;
-          if (!T[q] || SHADE[q] === STAMP) continue; SHADE[q] = STAMP; b.d[q] = X.shift(b.d[q], 1);
+          if (!(T[q] || (O && O[q])) || SHADE[q] === STAMP) continue; SHADE[q] = STAMP; b.d[q] = X.shift(b.d[q], 1);
         }
       });
     }
