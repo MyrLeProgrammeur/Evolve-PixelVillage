@@ -351,8 +351,9 @@
   mod('smelter', function (base, type, tier, k, season, lvl, o) {
     var out = base(type, tier, k, season, lvl, o), e2 = o.e2 || ''; if (e2.indexOf('V') < 0) return out;
     var r = grow(out, 0), Pg = PgO(r), f = e2.indexOf('t') >= 0 ? 1 : 0, at = Pg(1.7, 0.95);
-    r.pix.blit(frameOf('sig_converter', f, { MAIN: 'iron' }), at[0] - 7, at[1] - 14);
-    r.e2.mouth = f ? [at[0] + 2, at[1] - 7] : [at[0], at[1] - 13]; r.e2.tip = f; return r;
+    /* anki fork: 22x24 converter on its timber cradle, soot body with iron bands so it stands out from brick and paving */
+    r.pix.blit(frameOf('sig_converter', f, { MAIN: 'soot', METAL: 'iron', WOOD: 'walnut' }), at[0] - 11, at[1] - 23);
+    r.e2.mouth = f ? [at[0] + 8, at[1] - 16] : [at[0], at[1] - 22]; r.e2.pour = [at[0] + 8, at[1] + 1]; r.e2.tip = f; return r;
   });
 
   function mineMod(base, type, tier, k, season, lvl, o) {
@@ -556,7 +557,11 @@
         for (var yy = ty + 1; yy < hy; yy++) dset(b, bx + tx, by + yy, R('soot', 2), key + 0.01);
         dblit(b, X.sprite('sig_hook_block'), bx + tx - 2, by + hy, key + 0.01);
       }
-      if (it.type === 'smelter' && E.tip && E.mouth) for (var s = 0; s < 3; s++) { var dx = round((ih(s, f8, 966) - 0.3) * 14), dy = round(ih(f8, s, 967) * 12) - 4; sparkAt(b, bx + E.mouth[0] + dx, by + E.mouth[1] + dy, f8 + s, key + 0.01); }
+      if (it.type === 'smelter' && E.tip && E.mouth) {
+        /* anki fork: wider spark shower from the tipped mouth, and an ember pool on the ground below it */
+        for (var s = 0; s < 6; s++) { var dx = round((ih(s, f8, 966) - 0.25) * 22), dy = round(ih(f8, s, 967) * 16) - 5; sparkAt(b, bx + E.mouth[0] + dx, by + E.mouth[1] + dy, f8 + s, key + 0.01); }
+        if (E.pour) for (var gq = -3; gq <= 3; gq++) dset(b, bx + E.pour[0] + gq, by + E.pour[1] + (Math.abs(gq) > 2 ? 0 : 1) - 1, R('ember', (Math.abs(gq) + floor(t / 200)) % 3), key + 0.01);
+      }
       if (it.type === 'wardenclyffe' && E.torus && E.lit && ih(floor(t / 400), it.k, 968) < 0.55) {
         for (var a = 0; a < 1 + (f8 % 2); a++) sparkAt(b, bx + E.torus[0] + round((ih(f8, a, 969) - 0.5) * 18), by + E.torus[1] + round((ih(a, f8, 970) - 0.5) * 8), f8 + a, key + 0.01);
       }
