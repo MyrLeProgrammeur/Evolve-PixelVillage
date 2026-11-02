@@ -8,8 +8,8 @@
   <img src="project-docs/img/05-research-buttons.png" width="260" alt="Pixel buttons: yellow when affordable, grey and hatched when not">
 </p>
 
-> ### Status: humans only, Era 0 and Era 1
-> What is designed and drawn today is **only the human species**, **Era 0** (the evolution phase, human path) and **Era 1** (the primitive era and the early civilized era, up to the discovery era).
+> ### Status: humans only, Era 0, Era 1 and Era 2
+> What is designed and drawn today is **only the human species**, **Era 0** (the evolution phase, human path) **Era 1** (the primitive era and the early civilized era) and **Era 2** (the discovery era, up to industrialization).
 > **The roadmap is to cover every era and every species of the game** (see [ROADMAP.md](ROADMAP.md)). Anything beyond that still shows the original text interface, with no pixel view.
 > This is an early, unofficial project, tested by hand on one phone. Expect rough edges.
 
@@ -19,6 +19,7 @@
 |---|---|
 | **Era 0 view** | A pixel-art primordial pool that grows with your RNA/DNA, cell parts and evolution stage (soup, cells, phagocytosis, colony, worm, mammal, ape), then a shoreline, then the first human beside a campfire. |
 | **Era 1 village** | An isometric village drawn from the game state: 27 building types in 3 material tiers, 18 jobs, citizens that walk and work, resource piles, smoke, scaffolding, seasons, weather, 12 biomes, a far forest around the map. |
+| **Era 2 (discovery)** | A fourth "brick and steel" material tier once electricity is researched, apartments, a container port with a gantry, Wardenclyffe with its radio mast, a coal powerplant, a boot camp, a power grid with poles, wires and lit windows, cranes, conveyors, a Bessemer converter, dynamite blasts, workers in caps and overalls. |
 | **Pixel skin** | Pixel buttons (yellow = you can afford it, grey hatched = you cannot), wooden frames, a generated pixel font (`KitPixel`), warm walnut page background, pixel resource rows and message log. |
 | **Phone layout** | One column, the village pinned at the top, a bottom tab bar, big touch targets, info bubbles on **long press** (a normal tap acts). |
 | **Offline, no tracking** | No analytics, no web fonts, no CDN: Google Fonts, Google Tag Manager, unpkg and the GitHub version check were removed; libraries are vendored in `lib/`. |
@@ -80,18 +81,19 @@ New files: `src/anki.js`, `anki/` (Anki link: sensor, ledger, customData snippet
 
 ## Roadmap in one paragraph
 
-Finish and playtest Era 1; draw the remaining eras (discovery, industrialized, globalized, early space, deep space, solar, Tau Ceti, interstellar, intergalactic, dimensional, existential and the prestige layers); then cover **every species** (the game has about 60 playable species in about 20 genera, with different materials, housing, food and even worlds, e.g. aquatic or fire-based) and all evolution branches. Later: a touch-first interface, translations, an optional flashcard integration. Details, ordering and the per-era workflow are in [ROADMAP.md](ROADMAP.md).
+Playtest Eras 1 and 2; draw the remaining eras (industrialized, globalized, early space, deep space, solar, Tau Ceti, interstellar, intergalactic, dimensional, existential and the prestige layers); then cover **every species** (the game has about 60 playable species in about 20 genera, with different materials, housing, food and even worlds, e.g. aquatic or fire-based) and all evolution branches. Later: a touch-first interface, translations, an optional flashcard integration. Details, ordering and the per-era workflow are in [ROADMAP.md](ROADMAP.md).
 
 ## Repository layout
 
 ```
 index.html, evolve/, src/, lib/ …   the game (upstream, with the patches above)
-kit/                                 the sprite kit (pieces_b1…b9, generator, village, citizens, world, ui, era1, evolution)
+kit/                                 the sprite kit (pieces_b1…b10, generator, village, citizens, world, ui, era1, evolution, era2)
 atelier.html                         inspect every piece and simulate a village
 evolve/pixel.css, kitpixel.ttf       the pixel skin and the generated pixel font
 anki-village.js, anki-skin.js        host script (view panel) and skin loader
 kit-patches/                         local patches on top of the kit (re-apply after re-importing the kit)
 tools/make-font.js                   builds kitpixel.ttf from the kit's bitmap font
+tools/render-era2.js                 renders the Era 2 contact sheets to PNG in Node (no browser)
 tools/phone-test/                    developer tools to test on a rooted phone
 project-docs/                        audits, method, prompts, screenshots (see project-docs/README.md)
 ```

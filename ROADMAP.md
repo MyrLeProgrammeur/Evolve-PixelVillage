@@ -1,6 +1,6 @@
 # Roadmap
 
-**Where we are:** human species only, **Era 0** (evolution, human path) and **Era 1** (the `primitive` era and the early `civilized` era).
+**Where we are:** human species only, **Era 0** (evolution, human path), **Era 1** (the `primitive` era and the early `civilized` era) and **Era 2** (the `discovery` era: brick-and-steel tier, power grid).
 **Where we want to go:** a pixel view and a pixel interface for **every era** and **every species** of Evolve.
 
 Status legend: ✅ done · 🟡 partly done · ⬜ not started.
@@ -31,8 +31,8 @@ The game's techs are grouped in these eras (`src/tech.js`). Each era is a delta 
 |---|---|
 | Era 0 — evolution (`protoplasm`) | ✅ human path only; other branches (plants, fungi, arthropods, aquatic, demonic, celestial, eldritch, synthetic, challenge genes) ⬜ |
 | `primitive` + `civilized` | 🟡 Era 1 drawn and wired; audit leftovers and many events still to do (see the audit) |
-| `discovery` | ⬜ |
-| `industrialized` | ⬜ |
+| `discovery` | ✅ Era 2 drawn and wired (2026-11-02): tier 4 at `high_tech >= 2`, apartment, container port, Wardenclyffe, coal powerplant, boot camp, power grid, modifiers on Era 1 buildings; checked headless (`tools/render-era2.js`), not yet seen in a browser. Race and magic content left out, as in Era 1 |
+| `industrialized` | ⬜ next (Era 3: factory, oil, wharf, titanium, ANFO; starts at `high_tech: 3`) |
 | `globalized` | ⬜ |
 | `early_space` | ⬜ |
 | `deep_space` | ⬜ |

@@ -57,7 +57,21 @@ Rules upheld everywhere: zero dependencies (unpkg to be localised), nothing from
   to keep consistency) and add only the new batches.
 - Keep the principle: an Opus agent for the optimisation, you to look and decide.
 
+## Applied to Era 2 (`discovery`) on 2026-11-02: what worked, what changed
+Prompts in `project-docs/prompts/` (17: Era 2, batches 10-14; 19: Bessemer fix as a ready-made diff).
+- **Cut by tech levels, not by the `era` label**: it misleads (`steam_engine` only exists for the `gravity_well` trait,
+  `high_tech_factories`/banquet needs `high_tech: 17`). Map each building's `reqs` to the `grant: [key, level]` of the
+  tech that gives it. Era 2 = `high_tech` 1-2 (plus explosives 1-2).
+- **A later era is mostly systemic**: only 5 buildings, no job, no stored resource; the work is the next material tier,
+  modifiers on existing buildings and one system (the power grid). 117 raw images -> 31 pieces.
+- **Getting the delivery**: export the Claude Design project as a zip. Reading it file by file works but is costly.
+- **Checking the render without a browser**: `tools/render-era2.js` loads the kit in Node with a bare `window`, runs the
+  self-check and writes PNG contact sheets from the era's atelier functions.
+- **Integrating**: copy only the changed files into `kit/`, add new ones to `KIT` in `anki-village.js` and to
+  `atelier.html`, run `kit-patches/apply.sh`; drop local patches the kit no longer needs.
+- **Small fixes**: make them in the game's kit, then send the design tool the exact diff to apply.
+
 ## Unresolved
 - Exact meaning of the buildings' `on` field; real unlock order; assumed English names
-  (cabin, cottage, apartment, shed, mill); prompt not tested in Claude Design; prototype not wired into the game.
+  (cabin, cottage, apartment, shed, mill); the Era 1 prototype is not wired into the game (the design-tool deliveries are).
 - No image generator on the phone: every sprite is drawn in code.
