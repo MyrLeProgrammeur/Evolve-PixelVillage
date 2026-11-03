@@ -39,7 +39,10 @@
     if (!X.BUILDINGS.some(function (q) { return q.key === b[0]; })) X.BUILDINGS.push({ key: b[0], name: b[1], sector: b[2], fw: b[3], fd: b[4], h: b[5] });
     VL.CFG[b[0]] = [b[6], b[7]]; if (VL.ORDER.indexOf(b[0]) < 0) VL.ORDER.push(b[0]);
   });
-  var CONSUMER = { apartment: 1, wardenclyffe: 1 }, NEWK = {}; NEW.forEach(function (b) { NEWK[b[0]] = 1; });
+  /* extendable sets (hook for era3.js): grid consumers and grid sources */
+  var CONSUMER = SK.E2_CONSUMER = Object.assign(SK.E2_CONSUMER || {}, { apartment: 1, wardenclyffe: 1 }), SOURCE = SK.E2_SOURCE = Object.assign(SK.E2_SOURCE || {}, { coal_power: 1 }), NEWK = {}; NEW.forEach(function (b) { NEWK[b[0]] = 1; });
+  /* per-frame tuning set by later eras: blast scale, Tesla arc boost */
+  var E2X = SK.E2X = SK.E2X || { blast: 1, arc: 0 };
   /* the Era 1 map is full: Era 2 buildings take over the tail slots of the most numerous types (stable: only tail indices shift) */
   var TAIL = { basic_housing: 10, cottage: 5, lodge: 3, shed: 3, compost: 2, smokehouse: 2, silo: 3, mill: 3, farm: 5, lumber_yard: 2 };
   var PATCHED = new WeakSet();
@@ -237,7 +240,7 @@
     var g = B.put(F, { w: 0.8, d: 0.72, h: 16, plinth: 2, wall: { tex: 'tex_brick', ramp: 'ironbrick' }, roof: { type: 'gable', axis: 'y', tex: 'tex_corrugated', ramp: c.m.roofR, pitch: 1 }, snow: c.snow }, 0.08, 0.1);
     H.onFace(p, g, 'L', 'door_works', { MAIN: v.paint }, H.snap(3, 'L', 8), 0);
     H.onFace(p, g, 'R', 'win_tall', {}, H.snap(3, 'R', 6), 3);
-    var lv = fq < 0.34 ? 1 : fq < 0.67 ? 2 : 3, COL = ['madder', 'teal', 'saffron', 'indigo', 'sage', 'rust', 'plum'];
+    var lv = fq < 0.34 ? 1 : fq < 0.67 ? 2 : 3, COL = ['madder', 'teal', 'saffron', 'indigo', 'sage', 'rust', 'plum'].concat(e2.indexOf('A') >= 0 ? ['bronze', 'bronze'] : []);
     function leg(uF) { var A = Pg(uF, 0.95), Bq = Pg(uF, 1.82); truss(p, [A[0] - 1, A[1]], [A[0] - 1, A[1] - ZB], 2, 'oxide', { dir: 'v' }); truss(p, [Bq[0] - 1, Bq[1]], [Bq[0] - 1, Bq[1] - ZB], 2, 'oxide', { dir: 'v' });
       truss(p, [A[0], A[1] - ZB], [Bq[0], Bq[1] - ZB], 3, 'oxide', { dir: 'h' }); }
     if (gan) leg(0.32);
@@ -351,7 +354,7 @@
   mod('smelter', function (base, type, tier, k, season, lvl, o) {
     var out = base(type, tier, k, season, lvl, o), e2 = o.e2 || ''; if (e2.indexOf('V') < 0) return out;
     var r = grow(out, 0), Pg = PgO(r), f = e2.indexOf('t') >= 0 ? 1 : 0, at = Pg(1.7, 0.95);
-    /* anki fork: 22x24 converter on its timber cradle, soot body with iron bands so it stands out from brick and paving */
+    /* 22x24 converter on its timber cradle, soot body with iron bands so it stands out from brick and paving */
     r.pix.blit(frameOf('sig_converter', f, { MAIN: 'soot', METAL: 'iron', WOOD: 'walnut' }), at[0] - 11, at[1] - 23);
     r.e2.mouth = f ? [at[0] + 8, at[1] - 16] : [at[0], at[1] - 22]; r.e2.pour = [at[0] + 8, at[1] + 1]; r.e2.tip = f; return r;
   });
@@ -461,7 +464,7 @@
   function gridPlan(st) {
     var list = (VL.vil.plan && VL.vil.plan.list) || [];
     if (!powered(st)) { GRID = { key: 'off', poles: [], links: [], lamps: [], segs: [] }; return GRID; }
-    var src = list.filter(function (it) { return it.type === 'coal_power'; }), dst = list.filter(function (it) { return CONSUMER[it.type]; });
+    var src = list.filter(function (it) { return SOURCE[it.type]; }), dst = list.filter(function (it) { return CONSUMER[it.type]; });
     var key = list.map(function (i) { return i.type.slice(0, 2) + i.x + ',' + i.y; }).join(';'); if (key === GRID.key) return GRID;
     var occ = occOf(list), osig = 'e2g' + X.hash(key), poles = [], links = [], seen = {};
     function poleAt(u, v) { for (var i = 0; i < poles.length; i++) if (Math.hypot(poles[i].u - u, poles[i].v - v) < 1.2) return i; poles.push({ u: u, v: v }); return poles.length - 1; }
@@ -558,19 +561,19 @@
         dblit(b, X.sprite('sig_hook_block'), bx + tx - 2, by + hy, key + 0.01);
       }
       if (it.type === 'smelter' && E.tip && E.mouth) {
-        /* anki fork: wider spark shower from the tipped mouth, and an ember pool on the ground below it */
+        /* wider spark shower from the tipped mouth, and an ember pool on the ground below it */
         for (var s = 0; s < 6; s++) { var dx = round((ih(s, f8, 966) - 0.25) * 22), dy = round(ih(f8, s, 967) * 16) - 5; sparkAt(b, bx + E.mouth[0] + dx, by + E.mouth[1] + dy, f8 + s, key + 0.01); }
         if (E.pour) for (var gq = -3; gq <= 3; gq++) dset(b, bx + E.pour[0] + gq, by + E.pour[1] + (Math.abs(gq) > 2 ? 0 : 1) - 1, R('ember', (Math.abs(gq) + floor(t / 200)) % 3), key + 0.01);
       }
-      if (it.type === 'wardenclyffe' && E.torus && E.lit && ih(floor(t / 400), it.k, 968) < 0.55) {
-        for (var a = 0; a < 1 + (f8 % 2); a++) sparkAt(b, bx + E.torus[0] + round((ih(f8, a, 969) - 0.5) * 18), by + E.torus[1] + round((ih(a, f8, 970) - 0.5) * 8), f8 + a, key + 0.01);
+      if (it.type === 'wardenclyffe' && E.torus && E.lit && ih(floor(t / 400), it.k, 968) < 0.55 + (E2X.arc ? 0.35 : 0)) {
+        for (var a = 0; a < 1 + (f8 % 2) + (E2X.arc ? 2 : 0); a++) sparkAt(b, bx + E.torus[0] + round((ih(f8, a, 969) - 0.5) * (E2X.arc ? 30 : 18)), by + E.torus[1] + round((ih(a, f8, 970) - 0.5) * (E2X.arc ? 14 : 8)), f8 + a, key + 0.01);
       }
       if (E.tip && it.type === 'wardenclyffe' && X.OPT.night && floor(t / 500) % 2) { dset(b, bx + E.tip[0], by + E.tip[1], R('ember', 2), key + 0.01); dset(b, bx + E.tip[0] - 1, by + E.tip[1], R('ember', 3), key + 0.01); dset(b, bx + E.tip[0], by + E.tip[1] - 1, R('ember', 3), key + 0.01); }
       if (it.type === 'amphitheatre' && ent && ih(floor(t / 500), it.k, 971) < 0.5) { var cx = bx + o.ox, cy = by + o.oy - 8; sparkAt(b, cx - 6 + (f8 % 3) * 6, cy - (f8 % 2) * 2, f8, key + 0.01); }
       if (ex2 && E.blast && (it.type === 'mine' || it.type === 'coal_mine' || it.type === 'rock_quarry')) {
-        var cyc = 20000 + ih(it.k, it.type.length, 972) * 20000, off = ih(it.k, 3, 973) * cyc, ph2 = (t + off) % cyc, idx = floor((t + off) / cyc), bk = it.type + it.k;
-        if (ph2 < 125) for (var yy2 = -5; yy2 <= 5; yy2++) for (var xx2 = -8; xx2 <= 8; xx2++) if (xx2 * xx2 / 64 + yy2 * yy2 / 25 <= 1) dset(b, bx + E.blast[0] + xx2, by + E.blast[1] + yy2, X.pal().spark, key + 0.5);
-        if (BLAST[bk] !== idx && ph2 < 600) { BLAST[bk] = idx; VL.burst(bx + E.blast[0], by + E.blast[1], 'dust', 14); VL.burst(bx + E.blast[0], by + E.blast[1] - 4, 'dust', 8); }
+        var cyc = 20000 + ih(it.k, it.type.length, 972) * 20000, off = ih(it.k, 3, 973) * cyc, ph2 = (t + off) % cyc, idx = floor((t + off) / cyc), bk = it.type + it.k, bs = E2X.blast || 1, bxr = round(8 * bs), byr = round(5 * bs);
+        if (ph2 < 125) for (var yy2 = -byr; yy2 <= byr; yy2++) for (var xx2 = -bxr; xx2 <= bxr; xx2++) if (xx2 * xx2 / (bxr * bxr) + yy2 * yy2 / (byr * byr) <= 1) dset(b, bx + E.blast[0] + xx2, by + E.blast[1] + yy2, X.pal().spark, key + 0.5);
+        if (BLAST[bk] !== idx && ph2 < 600) { BLAST[bk] = idx; VL.burst(bx + E.blast[0], by + E.blast[1], 'dust', round(14 * bs)); VL.burst(bx + E.blast[0], by + E.blast[1] - 4, 'dust', round(8 * bs)); }
       }
     });
     if (deficit(st) && GRID.segs.length) { var ph3 = t % 1700, sg = GRID.segs[floor(t / 1700) % GRID.segs.length]; if (ph3 < 320) { var m = sagPt(sg[0], sg[1], sg[2], 0.3 + ih(floor(t / 1700), 1, 974) * 0.4); b.blit(X.sprite('fx_spark_' + (f8 % 3)), m[0] - 3, m[1] - 3); } }
@@ -737,6 +740,7 @@
   }
 
   SK.era2 = { truss: truss, wire: wire, conveyor: conveyor, rails: rails, grid: function () { return GRID; }, gridSheet: gridSheet, sheetBuildings: sheetBuildings, sheetTiers: sheetTiers, sheetMods: sheetMods,
-    citizenSheet: citizenSheet, trussTest: trussTest, pv: pv, NEW: NEW, TECH2: TECH2, check: check, litFor: litFor };
+    citizenSheet: citizenSheet, trussTest: trussTest, pv: pv, NEW: NEW, TECH2: TECH2, check: check, litFor: litFor, grow: grow, PgO: PgO, putOn: putOn, ring: ring, faceSpr: faceSpr, frameOf: frameOf, mod: mod, dyn: dyn, dset: dset, dblit: dblit,
+    polePix: polePix, rowP: rowP, nightOf: nightOf, keyOf: keyOf, occOf: occOf, freeAt: freeAt, dItem: dItem, drawCit: drawCit, sagPt: sagPt };
   }
 })(window);

@@ -1,9 +1,9 @@
 // Per-call CDP client: a loopback relay (lives only during this command) to Brave's abstract socket + Node's built-in WebSocket.
-// Attaches ONLY to the tab whose URL contains 127.0.0.1:8765.
+// Attaches ONLY to the tab whose URL contains 127.0.0.1:8766 (test port; never your own save on 8765).
 const net=require("net"),http=require("http"),fs=require("fs");
 function targets(){return new Promise((res,rej)=>http.get({socketPath:"\0chrome_devtools_remote",path:"/json"},r=>{let d="";r.on("data",c=>d+=c);r.on("end",()=>res(JSON.parse(d)))}).on("error",rej));}
-async function connect(){
-  const t=(await targets()).find(t=>t.type==="page"&&/127\.0\.0\.1:876[56]/.test(t.url)); if(!t) throw new Error("no evolve tab");
+async function connect(match){
+  const t=(await targets()).find(t=>t.type==="page"&&/127\.0\.0\.1:8766\//.test(t.url)&&(!match||t.url.includes(match))); if(!t) throw new Error("no evolve tab");
   const srv=net.createServer(c=>{const u=net.connect({path:"\0chrome_devtools_remote"});c.pipe(u);u.pipe(c);c.on("error",()=>u.destroy());u.on("error",()=>c.destroy());});
   await new Promise(r=>srv.listen(0,"127.0.0.1",r));
   const port=srv.address().port; const ws=new WebSocket(`ws://127.0.0.1:${port}/devtools/page/${t.id}`);

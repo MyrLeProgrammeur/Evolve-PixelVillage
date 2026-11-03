@@ -157,8 +157,9 @@
   var JOBS = ['unemployed', 'forager', 'farmer', 'hunter', 'lumberjack', 'quarry_worker', 'miner', 'coal_miner', 'cement_worker', 'craftsman', 'teamster', 'professor', 'scientist', 'priest', 'banker', 'entertainer', 'soldier', 'scavenger'];
   var RESOURCES = ['Food', 'Lumber', 'Stone', 'Furs', 'Copper', 'Iron', 'Cement', 'Coal', 'Steel', 'Money', 'Knowledge', 'Plywood', 'Brick', 'Wrought_Iron', 'Sheet_Metal', 'Aluminium'];
   /* 169 pieces of batches 1-7, 53 of batch 8 (Era 1 audit follow-up), 45 of batch 9 (Era 0: cell, organism, scenery, fx),
-     30 of batch 10 (Era 2: 3 textures, 6 modules, 10 signatures, 5 citizen layers, 3 sparks, 1 icon, 2 units) */
-  var EXPECTED = { texture: 12, module: 27, signature: 29, hero: 13, citizen: 78, decor: 27, animal: 14, icon: 19, unit: 13, effect: 13, 'interface': 7, cell: 13, organism: 18, scenery: 8, fx: 6 };
+     30 of batch 10 (Era 2: 3 textures, 6 modules, 10 signatures, 5 citizen layers, 3 sparks, 1 icon, 2 units),
+     23 of batch 11 (Era 3: 3 modules, 8 signatures, 8 vehicles, 1 citizen layer, 2 icons, 1 unit) */
+  var EXPECTED = { texture: 12, module: 30, signature: 37, hero: 13, citizen: 79, decor: 27, animal: 14, icon: 21, unit: 14, effect: 13, 'interface': 7, vehicle: 8, cell: 13, organism: 18, scenery: 8, fx: 6 };
   var ERA0 = { cell: 1, organism: 1, scenery: 1, fx: 1 };
   var BASE = { texture: 9, module: 19, signature: 18, hero: 12, citizen: 58, decor: 17, animal: 10, icon: 12, unit: 6, effect: 3, 'interface': 5 };
 
@@ -717,11 +718,12 @@
     if (SK.evo && SK.evo.samples) SK.evo.samples().forEach(function (s) { scan(s.pix, s.label); });
     if (ROT_LOG.length) issues.push(ROT_LOG.length + ' non-90° rotation request(s)');
     var total = 0; Object.keys(counts).forEach(function (k) { total += counts[k]; });
-    var t0 = 0, tgt = 0, b9 = 0, b10 = 0; Object.keys(BASE).forEach(function (k) { t0 += BASE[k]; });
+    var t0 = 0, tgt = 0, b9 = 0, b10 = 0, b11 = 0; Object.keys(BASE).forEach(function (k) { t0 += BASE[k]; });
     Object.keys(EXPECTED).forEach(function (k) { tgt += EXPECTED[k]; if (ERA0[k]) b9 += counts[k] || 0; });
-    Object.keys(SK.PIECES).forEach(function (n) { if (SK.PIECES[n].b10) b10++; });
+    Object.keys(SK.PIECES).forEach(function (n) { if (SK.PIECES[n].b10) b10++; if (SK.PIECES[n].b11) b11++; });
     if (SK.era2 && SK.era2.check) SK.era2.check(issues, notes);
-    return { counts: counts, expected: EXPECTED, base: BASE, total: total, target: tgt, baseTotal: t0, b8: total - t0 - b9 - b10, b9: b9, b10: b10, era0: ERA0, issues: issues, notes: notes, scanned: scanned };
+    if (SK.era3 && SK.era3.check) SK.era3.check(issues, notes);
+    return { counts: counts, expected: EXPECTED, base: BASE, total: total, target: tgt, baseTotal: t0, b8: total - t0 - b9 - b10 - b11, b9: b9, b10: b10, b11: b11, era0: ERA0, issues: issues, notes: notes, scanned: scanned };
   }
 
   G.SpriteKit = {
@@ -739,7 +741,7 @@
       raf = requestAnimationFrame(tick);
       return { stop: function () { alive = false; cancelAnimationFrame(raf); }, set: setOptions, reward: function () { if (SK.ui && V) SK.ui.reward(V.t); } };
     },
-    isReady: function () { if (SK._runExt) SK._runExt(); return !!(SK.PALETTE && SK.PARTS.b1 && SK.PARTS.b2 && SK.PARTS.b3 && SK.PARTS.b4 && SK.PARTS.b5 && SK.PARTS.b6 && SK.PARTS.b7 && SK.PARTS.b8 && SK.PARTS.b9 && SK.PARTS.b10 && SK.era1 && SK.era2 && SK.evo && SK.village && SK.village.b3 && SK.village.b4 && SK.citizens && SK.world && SK.ui); },
+    isReady: function () { if (SK._runExt) SK._runExt(); return !!(SK.PALETTE && SK.PARTS.b1 && SK.PARTS.b2 && SK.PARTS.b3 && SK.PARTS.b4 && SK.PARTS.b5 && SK.PARTS.b6 && SK.PARTS.b7 && SK.PARTS.b8 && SK.PARTS.b9 && SK.PARTS.b10 && SK.PARTS.b11 && SK.era1 && SK.era2 && SK.era3 && SK.evo && SK.village && SK.village.b3 && SK.village.b4 && SK.citizens && SK.world && SK.ui); },
     _: { pal: pal, R: R, shift: shift, darkest: darkest, Pix: Pix, sprite: sprite, slotMap: slotMap, shell: shell, terrain: terrain, layout: layout,
       texC: texC, selout: selout, fillPoly: fillPoly, line: line, worldPt: worldPt, ih: ih, ATLAS: ATLAS, NX: NX, NY: NY, MAPN: MAPN,
       CH: CH, SEASONS: SEASONS, BIOMES: BIOMES, BUILDINGS: BUILDINGS, JOBS: JOBS, RESOURCES: RESOURCES, EXPECTED: EXPECTED, BASE: BASE, OPT: OPT, DEMO: DEMO,

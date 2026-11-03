@@ -91,7 +91,11 @@
       ironbrick:  ['#c48b72', '#985748', '#6d3a39', '#48282f', '#2c1a22'],
       zinc:       ['#e3e6da', '#b8bfb8', '#8b9494', '#616a6f', '#40474f'],
       glass:      ['#d0e2d8', '#94b5b8', '#678a99', '#476178', '#2f3f55'],
-      oxide:      ['#f2a276', '#cf6a47', '#9d4636', '#692e2b', '#411c1f']
+      oxide:      ['#f2a276', '#cf6a47', '#9d4636', '#692e2b', '#411c1f'],
+
+      /* Era 3 additions (own family): titanium (cold, light blue-grey), crude oil (brown-black with a warm sheen) */
+      titanium:   ['#f3f4f1', '#ccd3df', '#a0a9bf', '#717b95', '#494f6a'],
+      crude:      ['#9b8a6e', '#5e5047', '#3a312f', '#252022', '#161315']
     },
     /* Semantic base slots -> default ramp. The generator recolours by swapping the ramp in a slot. */
     slots: { WOOD: 'oak', STONE: 'river', CLAY: 'terracotta', FOLIAGE: 'summer', SKIN: 'skin_fair', CLOTH_A: 'saffron', CLOTH_B: 'indigo', METAL: 'iron' },
@@ -108,7 +112,8 @@
       { id: 'ground', label: 'Ground, snow, water, sky, fire', slot: 'terrain', ramps: ['dirt', 'sand', 'basalt', 'ashen', 'snow', 'water', 'murk', 'sky', 'haze', 'ember'] },
       { id: 'era1', label: 'Era 1 additions', slot: 'METAL / SKIN', ramps: ['aluminium', 'skin_pale'] },
       { id: 'era0', label: 'Era 0 additions (pool, cells)', slot: 'MAIN / water', ramps: ['abyss', 'bog', 'lagoon', 'cytoplasm', 'nacre', 'kelp'] },
-      { id: 'era2', label: 'Era 2 additions (brick and steel)', slot: 'WALL / ROOF / GLASS / PAINT', ramps: ['ironbrick', 'zinc', 'glass', 'oxide'] }
+      { id: 'era2', label: 'Era 2 additions (brick and steel)', slot: 'WALL / ROOF / GLASS / PAINT', ramps: ['ironbrick', 'zinc', 'glass', 'oxide'] },
+      { id: 'era3', label: 'Era 3 additions (industrialization)', slot: 'METAL / OIL', ramps: ['titanium', 'crude'] }
     ]
   };
 })(window);

@@ -463,7 +463,7 @@
       if (sp.smoke) sp.smoke.forEach(function (q) { CHIMS.push([bx + q[0], by + q[1]]); });
       if (sp.emit) sp.emit.forEach(function (e) { EMITS.push({ x: bx + e[0], y: by + e[1], kind: e[2] }); });
       if (it === catIt) b.blit(x.sprite('cat_roof', { MAIN: ctx.season === 3 ? 'hair_black' : 'ochre' }), bx + sp.roof[0] - 2, by + sp.roof[1] - 5);
-      if (VIL.tier >= 2 && VIL.started) roofs.push({ it: it, p: [bx + sp.roof[0], by + sp.roof[1]] });
+      if (VIL.tier >= 2 && VIL.started && !sp.noBunt) roofs.push({ it: it, p: [bx + sp.roof[0], by + sp.roof[1]] });
     });
     var used = new Set();
     roofs.forEach(function (r, i) {

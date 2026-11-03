@@ -56,7 +56,7 @@
   var FLP = { land: ['fl_scarf_end', 'fl_beads', 'fl_flower_hair', 'fl_poncho_trim', 'fl_shoulder_bag'], wood: ['fl_scarf_end', 'fl_beads', 'fl_flower_hair'],
     craft: ['fl_beads', 'fl_flower_hair', 'fl_scarf_end'], lore: ['fl_beads', 'fl_shoulder_bag', 'fl_flower_hair'], faith: ['fl_beads'], finance: ['fl_beads', 'fl_flower_hair'], scav: ['fl_scarf_end', 'fl_beads'] };
   /* hats that stay on in snow and rain */
-  var KEEP_HAT = { hat_helmet: 1, hat_miner_lamp: 1, hat_hood: 1 };
+  var KEEP_HAT = { hat_helmet: 1, hat_steel_helmet: 1, hat_miner_lamp: 1, hat_hood: 1 };
 
   var LOOKS = new Map();
   function look(job, seed) {
@@ -78,10 +78,12 @@
   /* tool metals from the real tool techs: pickaxe / hammer / hoe 1 bronze, 2 iron, 3 steel (0 = stone);
      axe 1 stone, 2 copper, 3 iron, 4+ steel (tech.axe 4 = steel axes). tech.mining no longer drives the pick (mining 4 = coal, not steel). */
   function tierM(lv, base) { lv = lv | 0; return lv >= 3 ? 'steel' : lv === 2 ? 'iron' : lv === 1 ? 'bronze' : base; }
+  /* Era 3 hook: axe 5, hammer 4 and hoe 4 are titanium tools (the pickaxe keeps its scale: pickaxe 4 is the jackhammer); military 4 = steel helmet */
+  function tierT(lv, base) { return (lv | 0) >= 4 && SK.PALETTE.ramps.titanium ? 'titanium' : tierM(lv, base); }
   function metals(o) {
-    o = o || {}; var ax = Math.max(1, Math.min(4, o.axe | 0 || 1)), mi = o.mining | 0, ar = o.armor | 0;
-    return { axe: ['slate', 'copper', 'iron', 'steel'][ax - 1], pick: tierM(o.pickaxe, 'slate'), hammer: tierM(o.hammer, 'river'), hoe: tierM(o.hoe, 'slate'),
-      tool: mi >= 3 ? 'iron' : mi >= 2 ? 'copper' : 'slate', helm: ar >= 2 ? 'iron' : 'bronze', bow: (o.military | 0) >= 1, armor: ar };
+    o = o || {}; var ax = Math.max(1, Math.min(5, o.axe | 0 || 1)), mi = o.mining | 0, ar = o.armor | 0;
+    return { axe: ['slate', 'copper', 'iron', 'steel', SK.PALETTE.ramps.titanium ? 'titanium' : 'steel'][ax - 1], pick: tierM(o.pickaxe, 'slate'), hammer: tierT(o.hammer, 'river'), hoe: tierT(o.hoe, 'slate'),
+      tool: mi >= 3 ? 'iron' : mi >= 2 ? 'copper' : 'slate', helm: ar >= 2 ? 'iron' : 'bronze', bow: (o.military | 0) >= 1, mg: (o.military | 0) >= 4, armor: ar };
   }
   function toolMap(t, M, L, J, o) {
     switch (t) {
@@ -114,6 +116,7 @@
       case 'hat_scholar': return { MAIN: 'soot', ACCENT: 'saffron' };
       case 'hat_top': return { MAIN: 'soot', ACCENT: 'madder' };
       case 'hat_helmet': return { METAL: M.helm, ACCENT: 'madder' };
+      case 'hat_steel_helmet': return { METAL: 'sage' };
       case 'hat_fur': return { MAIN: L.coat === 'walnut' ? 'hide' : 'walnut', ACCENT: 'cream' };
       case 'fl_rain_hood': return { MAIN: L.cloth === 'saffron' ? 'teal' : 'saffron', ACCENT: 'walnut' };
       case 'hat_flatcap': return { MAIN: ['driftwood', 'hide', 'sage', 'walnut'][L.skin.length % 4], ACCENT: L.cloth };
@@ -131,7 +134,7 @@
   function compose(job, seed, mode, f, o) {
     o = o || {}; f = f & 3;
     var M = metals(o), back = !!o.back, wx = o.wx || '', winter = wx.indexOf('w') >= 0, rain = wx.indexOf('r') >= 0, e2 = o.e2 || '';
-    var key = [job, seed, mode, f, back ? 1 : 0, M.axe, M.pick, M.hammer, M.hoe, M.tool, M.helm, M.bow ? 1 : 0, M.armor, wx, o.famine ? 1 : 0, o.wound ? 1 : 0, o.carry || '', o.banner || '', o.merc ? 1 : 0, o.tool || '', e2].join('|');
+    var key = [job, seed, mode, f, back ? 1 : 0, M.axe, M.pick, M.hammer, M.hoe, M.tool, M.helm, M.bow ? 1 : 0, M.mg ? 1 : 0, M.armor, wx, o.famine ? 1 : 0, o.wound ? 1 : 0, o.carry || '', o.banner || '', o.merc ? 1 : 0, o.tool || '', e2].join('|');
     var hit = CACHE.get(key); if (hit) return hit;
     if (CACHE.size > 4000) CACHE.clear();
     var J = JOB[job], A = ARCH[o.merc ? 'merc' : J.a], L = look(job, seed), robe = A.body === 'robe', p = new Pix(CW, CHh), sh = J.soot ? 1 : 0;
@@ -165,8 +168,9 @@
     if (e2.indexOf('c') >= 0 && P.hat_flatcap && !KEEP_HAT[hat]) hat = 'hat_flatcap';
     if (e2.indexOf('f') >= 0 && P.hat_fedora) hat = 'hat_fedora';
     if (o.merc) hat = 'hat_fur';
+    if (M.mg && hat === 'hat_helmet' && P.hat_steel_helmet) hat = 'hat_steel_helmet';
     if (winter && !KEEP_HAT[hat]) hat = 'hat_fur';
-    if (rain && !(hat === 'hat_helmet' || hat === 'hat_miner_lamp')) hat = 'fl_rain_hood';
+    if (rain && !(hat === 'hat_helmet' || hat === 'hat_steel_helmet' || hat === 'hat_miner_lamp')) hat = 'fl_rain_hood';
     var cut = (hat && L.cut === 'bun') ? 'short' : L.cut, bx = back ? -1 : 0, flick = tool === 'tool_torch' && (f & 1);
     if (J.cart) {
       var cx = OX + 3 - 11 + adx, cy = OY + 14 + U;
@@ -451,6 +455,6 @@
   VL.samples = function () { return (baseSamples ? baseSamples() : []).concat(samples()); };
 
   SK.citizens = { update: update, draw: draw, compose: compose, strip: strip, lineup: lineup, states: states, STATES: STATES, heads: heads, look: look, JOB: JOB, ARCH: ARCH, wN: wN, metals: metals,
-    GOV_COL: GOV_COL, list: function () { return ST.list; }, last: function () { return LAST; }, route: route, AX: AX, AY: AY, CW: CW, CH: CHh };
+    GOV_COL: GOV_COL, list: function () { return ST.list; }, last: function () { return LAST; }, route: route, AX: AX, AY: AY, CW: CW, CH: CHh, CARRY: CARRY };
   }
 })(window);
