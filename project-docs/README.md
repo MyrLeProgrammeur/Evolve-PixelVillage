@@ -4,6 +4,8 @@ Working documents behind the fork. **They were produced by AI agents reading the
 
 | Document | What it is |
 |---|---|
+| [HANDOFF.md](HANDOFF.md) | **Start here** to resume the work: branches, commands, current state, next steps (French). |
+| [reports/](reports/) | Working reports in French: Era 3 inventory and optimisation (20, 21), map and UI reviews (24, 25), the implementation plan of the continuous planet map and landscape HUD (26), J0 performance measurements (27), and the overall project plan (`plan/PLAN.md` and its studies). |
 | [METHODE-SPRITES.md](METHODE-SPRITES.md) | The method used to dress one era with pixel art (inventory, optimisation into pieces + generator, prompt, integration). To be replayed for every era. |
 | [audit/SYNTHESE.md](audit/SYNTHESE.md) | Era 1 coverage audit: what the kit covers for a human, what is missing, errors found in the first inventory. |
 | [audit/A-batiments.md](audit/A-batiments.md) | Buildings (every entry of the `city` block). |
@@ -18,5 +20,5 @@ Working documents behind the fork. **They were produced by AI agents reading the
 | [audit/H-skin-pixel.md](audit/H-skin-pixel.md) | Analysis behind the pixel skin (CSS prototype: [H-prototype-theme-pixel.css](audit/H-prototype-theme-pixel.css)). |
 | [audit/8-sprites-evolve-ere1.md](audit/8-sprites-evolve-ere1.md), [audit/9-optimisation-sprites.md](audit/9-optimisation-sprites.md) | The first inventory of Era 1 (superseded by the audits above, kept for history) and the optimisation plan. |
 | [audit/COUVERTURE-KIT.md](audit/COUVERTURE-KIT.md) | List of pieces in the kit (generated). |
-| [prompts/](prompts/) | The prompts given to the design tool to produce the kit, Era 0 and the Era 1 fixes. |
+| [prompts/](prompts/) | The prompts given to the design tool to produce the kit, Era 0, the Era 1 fixes, Eras 2 and 3, and the planet terrain brief (27). |
 | [img/](img/) | Screenshots. |
