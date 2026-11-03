@@ -1,0 +1,34 @@
+BANC DE MESURE DE LA CARTE (J0) DANS ANKI BUREAU — à faire par Mathéo sur son PC
+==============================================================================
+
+But : savoir si la future carte (planète en morceaux, zoom fluide) tient la cadence dans Anki,
+surtout avec le pilote vidéo « software » (le cas le plus lent, notre plancher).
+Le banc ne touche ni ta partie ni ta collection : il dessine une planète bidon et mesure.
+
+0. Installer le paquet de banc : « evolve_village-2026-11-03-bench-grande-planete.ankiaddon » (dans Download du téléphone),
+   ou le construire sur le PC depuis le dépôt : python3 tools/addon/build_addon.py --bench  → dist/evolve_village-bench.ankiaddon
+   (double-clic, ou Outils > Modules > Installer depuis un fichier). Il remplace l'add-on Evolve Village normal et ajoute une entrée de menu de dev.
+   Ta partie reste à sa place (dossier du profil, anki-village/save.txt).
+
+1. Pilote « software »
+   - Outils > Préférences > Général (ou Basique) > « Pilote vidéo » : choisir « Software ».
+   - Redémarrer Anki (obligatoire pour que le pilote change).
+   - Outils > « Evolve Village: map bench (dev) ». Une fenêtre de 1100 x 800 s'ouvre sur une carte.
+   - Cliquer « Run all ». Ne plus toucher la fenêtre pendant environ 4 minutes (ne pas la réduire,
+     ne pas la cacher derrière une autre : la mesure s'arrêterait).
+   - À la fin, une bulle indique « Mesures enregistrées : <chemin>.json ».
+   - Agrandir la fenêtre en plein écran, relancer « Run all », attendre la seconde bulle.
+
+2. Pilote GPU
+   - Préférences > Pilote vidéo : revenir au réglage d'origine (OpenGL, ANGLE ou Direct3D selon le PC).
+   - Redémarrer Anki, refaire l'étape 1 (fenêtre 1100 x 800, puis plein écran).
+
+3. M'envoyer les 4 fichiers JSON
+   Ils sont dans le dossier de l'add-on, sous-dossier user_files (Outils > Modules > Evolve Village >
+   « Afficher les fichiers »). Ils ne contiennent que des temps de mesure, le nom du navigateur intégré
+   et la taille de la fenêtre : aucune donnée de ta collection.
+   Le plus simple : demander à Bruno de me les passer par le pont, ou les copier toi-même.
+
+4. Remettre le paquet normal (evolve_village.ankiaddon) quand on a fini, si tu veux enlever l'entrée de dev.
+
+En cas de souci : capture de la fenêtre + le texte affiché dans le panneau en haut à gauche.

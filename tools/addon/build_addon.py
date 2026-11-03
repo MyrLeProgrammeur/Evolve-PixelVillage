@@ -1,7 +1,8 @@
 """Construit dist/evolve_village.ankiaddon (zip, fichiers à la racine) : le code Python de addon/ et les
 fichiers du jeu dont la page a besoin. Bibliothèque standard seulement.
 
-Usage : python3 tools/addon/build_addon.py [--dir]   (--dir : produit aussi le dossier dist/evolve_village/,
+Usage : python3 tools/addon/build_addon.py [--dir] [--bench]   (--bench : ajoute le banc de mesure J0, outil de dev ;
+        --dir : produit aussi le dossier dist/evolve_village/,
         à copier tel quel dans le dossier addons21 d'Anki pour un essai sans installation)
 """
 
@@ -21,12 +22,18 @@ GAME_FILES = [
     "LICENSE", "NOTICE",
 ]
 GAME_DIRS = ["evolve", "lib", "font", "kit", "strings"]
+# --bench (dev only): the J0 map bench, opened from Tools > "Evolve Village: map bench (dev)"
+BENCH_FILES = ["map/coords.js", "core/dmath.js", "tools/map-bench/bench.html", "tools/map-bench/bench.js", "tools/map-bench/spike-world.js", "tools/map-bench/spike-terrain.js",
+               "tools/map-bench/spike-bake.js", "tools/map-bench/spike-render.js", "tools/map-bench/spike-dyn.js", "tools/map-bench/scenarios.js",
+               "tools/map-bench/gen-proto.js"]
 SKIP_EXT = {".py", ".md", ".map"}
 
 
 def files():
     out = [("addon/__init__.py", "__init__.py"), ("addon/village_events.py", "village_events.py")]
     out += [(f, f) for f in GAME_FILES]
+    if "--bench" in sys.argv:
+        out += [(f, f) for f in BENCH_FILES]
     for d in GAME_DIRS:
         for base, _dirs, names in os.walk(os.path.join(ROOT, d)):
             for n in sorted(names):
@@ -41,7 +48,7 @@ def main():
     os.makedirs(DIST, exist_ok=True)
     manifest = json.load(open(os.path.join(ROOT, "addon", "manifest.json"), encoding="utf-8"))
     manifest["mod"] = int(time.time())
-    target = os.path.join(DIST, manifest["package"] + ".ankiaddon")
+    target = os.path.join(DIST, manifest["package"] + ("-bench" if "--bench" in sys.argv else "") + ".ankiaddon")
     listing = files()
     missing = [s for s, _ in listing if not os.path.isfile(os.path.join(ROOT, s))]
     if missing:

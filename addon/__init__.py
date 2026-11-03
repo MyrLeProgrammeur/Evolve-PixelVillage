@@ -12,11 +12,12 @@ fournit les révisions de la collection, en lecture seule (village_events.py).
 import json
 import os
 import secrets
+import time
 
 from aqt import gui_hooks, mw
 from aqt.main import MainWindowState
 from aqt.qt import QAction, QDialog, QTimer, QUrl, QVBoxLayout
-from aqt.utils import restoreGeom, saveGeom
+from aqt.utils import restoreGeom, saveGeom, tooltip
 from aqt.webview import AnkiWebView
 
 from .village_events import Sensor, strip_html
@@ -24,7 +25,7 @@ from .village_events import Sensor, strip_html
 ADDON = mw.addonManager.addonFromModule(__name__)
 ADDON_DIR = os.path.dirname(__file__)
 # Fichiers du jeu servis à la page ; rien d'autre (ni .py, ni meta.json).
-mw.addonManager.setWebExports(__name__, r"(index\.html|.*\.(js|css|png|svg|ico|woff2?|ttf|eot)|strings/.*\.json)")
+mw.addonManager.setWebExports(__name__, r"(index\.html|tools/map-bench/bench\.html|.*\.(js|css|png|svg|ico|woff2?|ttf|eot)|strings/.*\.json)")
 
 _dialog = None
 _profile = None   # (Store, Sensor) du profil ouvert
@@ -261,6 +262,57 @@ def _profile_closing():
     if _dialog is not None:
         _dialog.finish()
     _profile = None
+
+
+# --------------------------------------------------------------------------- banc de mesure de la carte (J0, outil de dev)
+# Présent seulement dans un paquet construit avec « build_addon.py --bench ». Les résultats arrivent par
+# pycmd("pvbench:" + JSON) et sont écrits dans user_files/ du dossier de l'add-on (conservé par Anki).
+BENCH_PAGE = os.path.join(ADDON_DIR, "tools", "map-bench", "bench.html")
+_bench = None
+
+
+class BenchDialog(QDialog):
+    def __init__(self):
+        super().__init__(mw)
+        self.setWindowTitle("Evolve Village - map bench (dev)")
+        self.web = AnkiWebView(parent=self, title="evolve_village_bench")
+        self.web.set_bridge_command(self.on_bridge, self)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.web)
+        self.setLayout(layout)
+        self.resize(1100, 800)
+        self.web.load_url(QUrl("%s_addons/%s/tools/map-bench/bench.html" % (mw.serverURL(), ADDON)))
+
+    def on_bridge(self, cmd):
+        if not cmd.startswith("pvbench:"):
+            return None
+        body = cmd[len("pvbench:"):]
+        try:
+            json.loads(body)
+        except ValueError:
+            return {"error": "bad json"}
+        folder = os.path.join(ADDON_DIR, "user_files")
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, "bench-%s.json" % time.strftime("%Y%m%d-%H%M%S"))
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(body)
+        tooltip("Mesures enregistrées : " + path, period=8000)
+        return {"ok": True, "path": path}
+
+
+def open_bench():
+    global _bench
+    if _bench is not None:
+        _bench.close()
+    _bench = BenchDialog()
+    _bench.show()
+
+
+if os.path.isfile(BENCH_PAGE):
+    bench_action = QAction("Evolve Village: map bench (dev)", mw)
+    bench_action.triggered.connect(open_bench)
+    mw.form.menuTools.addAction(bench_action)
 
 
 action = QAction("Evolve Village", mw)
