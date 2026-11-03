@@ -5,13 +5,12 @@ Document de reprise pour continuer sur le PC (ou sur le téléphone). En frança
 ## Branches
 | Branche | Contenu |
 |---|---|
-| `refonte-carte` | **la plus avancée, c'est ici qu'on reprend** : tout ce qui suit + le spike J0 de la carte + les docs |
-| `ere3-sprites` | sprites de l'Ère 3 (`industrialized`) branchés dans le jeu |
-| `ere2-sprites` | sprites de l'Ère 2 (`discovery`) + docs de l'Ère 2 |
-| `socle-anki` | socle Anki (grand livre, horloge à cartes) + add-on bureau |
-| `pixel-village` | branche par défaut (Ère 1) |
+| `refonte-carte` | **branche de travail, c'est ici qu'on reprend** : Ère 1, socle Anki + add-on, Ères 2 et 3, spike J0 de la carte, docs |
+| `pixel-village` | branche par défaut sur GitHub (Ère 1), en retard sur `refonte-carte` |
+| `master` | base du dépôt amont d'Evolve |
 
-Chaque branche contient la précédente. **Le dépôt est public** : vérifier chaque poussée (ni données de collection,
+Les anciennes branches `socle-anki`, `ere2-sprites` et `ere3-sprites` ont été supprimées le 2026-11-03 : tout leur
+contenu est dans `refonte-carte`. **Le dépôt est public** : vérifier chaque poussée (ni données de collection,
 ni secrets, ni sauvegarde).
 
 ## Reprendre sur le PC
